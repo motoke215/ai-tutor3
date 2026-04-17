@@ -396,7 +396,8 @@ async function callModelAPI(provider, config, messages, system) {
   }
 
   const providerConfig = MODEL_PROVIDERS[provider] || {};
-  const baseUrl = url || providerConfig.defaultUrl || '';
+  // 始终使用默认URL，用户在配置面板看到的URL就是实际调用的URL
+  const baseUrl = providerConfig.defaultUrl || '';
   const endpoint = getEndpoint(provider);
 
   let fullUrl = baseUrl;
@@ -596,19 +597,15 @@ function ModelConfigPanel({ T, onClose }) {
                     </div>
                   </div>
 
-                  {/* URL */}
+                  {/* URL (Read-only) */}
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>API URL</div>
-                    <input
-                      type="text"
-                      value={config.url || provider.defaultUrl}
-                      onChange={e => updateConfig(provider.id, 'url', e.target.value)}
-                      placeholder={provider.defaultUrl}
-                      style={{
-                        width: '100%', background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8,
-                        padding: '8px 10px', color: T.text, fontSize: 13, fontFamily: 'inherit',
-                      }}
-                    />
+                    <div style={{
+                      width: '100%', background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8,
+                      padding: '8px 10px', color: T.accent, fontSize: 13, fontFamily: 'monospace',
+                    }}>
+                      {provider.defaultUrl}{provider.endpoint}
+                    </div>
                   </div>
 
                   {/* Model */}
