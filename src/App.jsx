@@ -304,9 +304,8 @@ function normalizeSiliconFlowVoiceName(voice) {
   };
   return aliasMap[value] || String(voice || "").trim();
 }
-
-
-你正在辅导学生学习「${subject}」，学生水平：${level}，目标：${goal || "全面掌握"}。
+function buildTutorSystemPrompt(subject, level, goal) {
+  return `你正在辅导学生学习「${subject}」，学生水平：${level}，目标：${goal || "全面掌握"}。
 
 【苏格拉底教学原则】
 1. 永不直接给答案——先问学生已知什么，找到知识漏洞
@@ -1481,7 +1480,7 @@ export default function App() {
     if (!subject.trim()) return;
     const t = getTeacher(subject);
     setTeacher(t);
-    systemRef.current = buildSystem(subject.trim(), level, goal.trim(), t);
+    systemRef.current = buildTutorSystemPrompt(subject.trim(), level, goal.trim());
     setPhase("chat");
     setMastery(0);
     setMessages([]);
@@ -1510,7 +1509,7 @@ export default function App() {
     setSessionStats(recoveryProgress.sessionStats || { turns: 0, startTime: Date.now() });
     const t = getTeacher(recoveryProgress.subject);
     setTeacher(t);
-    systemRef.current = buildSystem(recoveryProgress.subject, recoveryProgress.level || "初学者", recoveryProgress.goal || "", t);
+    systemRef.current = buildTutorSystemPrompt(recoveryProgress.subject, recoveryProgress.level || "初学者", recoveryProgress.goal || "");
     setPhase("chat");
     setRecoveryProgress(null);
   };
