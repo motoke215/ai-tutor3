@@ -486,8 +486,13 @@ async function callModelAPI(provider, config, messages, system) {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `API请求失败: ${response.status}`);
+    const errorText = await response.text().catch(() => '');
+    const errorData = JSON.parse(errorText || '{}');
+    throw new Error(
+      errorData.error?.message ||
+      errorData.message ||
+      `API请求失败 [${response.status} ${response.statusText}]: ${errorText.slice(0, 200)}`
+    );
   }
 
   const data = await response.json();
