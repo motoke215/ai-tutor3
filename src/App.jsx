@@ -69,13 +69,15 @@ const MODEL_PROVIDERS = {
     defaultUrl: "https://api.minimax.chat/v1",
     endpoint: "/text/chatcompletion_v2",
     extraFields: [
-      { id: "groupId", label: "Group ID", placeholder: "输入 MiniMax Group ID" },
+      { id: "groupId", label: "Group ID", placeholder: "输入 MiniMax Group ID（仅旧版接口需要）" },
     ],
     models: [
-      { id: "abab6.5s", name: "ABAB6.5s", desc: "245k上下文 · 通用场景" },
-      { id: "abab6.5t", name: "ABAB6.5t", desc: "8k上下文 · AI陪伴" },
-      { id: "abab6.5g", name: "ABAB6.5g", desc: "8k上下文 · 英文陪伴" },
-      { id: "abab7-preview", name: "ABAB7 Preview", desc: "最新旗舰" },
+      { id: "MiniMax-M2.7", name: "MiniMax M2.7", desc: "新一代旗舰通用模型" },
+      { id: "MiniMax-M2.5", name: "MiniMax M2.5", desc: "稳定对话与推理" },
+      { id: "MiniMax-M2", name: "MiniMax M2", desc: "通用对话模型" },
+      { id: "MiniMax-M2.1", name: "MiniMax M2.1", desc: "轻量高性价比" },
+      { id: "MiniMax-M2-Her", name: "MiniMax M2-her", desc: "角色陪伴风格" },
+      { id: "abab7-preview", name: "ABAB7 Preview", desc: "兼容旧版账号" },
     ],
   },
   siliconflow: {
@@ -411,28 +413,52 @@ function toAnthropicMessages(messages) {
     }));
 }
 
+function extractMiniMaxText(data) {
+  return data?.reply
+    || data?.choices?.[0]?.message?.content
+    || data?.base_resp?.reply
+    || data?.output?.text
+    || data?.output_text
+    || data?.data?.reply
+    || data?.data?.text
+    || data?.messages?.[0]?.text
+    || "";
+}
+
 function extractResponseText(provider, data) {
   if (provider === "anthropic") {
     return data.content?.find?.(item => item.type === "text")?.text || "";
   }
   if (provider === "minimax") {
-    return data.reply || data.choices?.[0]?.message?.content || "";
+    return extractMiniMaxText(data);
   }
   return data.choices?.[0]?.message?.content || "";
 }
 
 function buildMiniMaxBody(config, messages, system) {
-  if (!config.groupId) {
-    throw new Error("MiniMax 需要填写 Group ID");
+  const allMessages = system ? [{ role: "system", content: system }, ...messages] : messages;
+  const usesLegacyEndpoint = /chatcompletion_v2/i.test(MODEL_PROVIDERS.minimax.endpoint);
+
+  if (usesLegacyEndpoint) {
+    if (!config.groupId) {
+      throw new Error("MiniMax 需要填写 Group ID");
+    }
+    return {
+      model: config.model,
+      messages: messages.map(toOpenAIMessage),
+      temperature: 0.7,
+      tokens_to_generate: 1000,
+      reply_constraints: { sender_type: "BOT", sender_name: "AI Tutor" },
+      bot_setting: [{ bot_name: "AI Tutor", content: system || "You are a helpful assistant." }],
+      group_id: config.groupId,
+    };
   }
+
   return {
     model: config.model,
-    messages: messages.map(toOpenAIMessage),
+    messages: allMessages.map(toOpenAIMessage),
     temperature: 0.7,
-    tokens_to_generate: 1000,
-    reply_constraints: { sender_type: "BOT", sender_name: "AI Tutor" },
-    bot_setting: [{ bot_name: "AI Tutor", content: system || "You are a helpful assistant." }],
-    group_id: config.groupId,
+    max_tokens: 1000,
   };
 }
 
@@ -517,9 +543,16 @@ async function transcribeAudio(config, blob, lang) {
   return data.text || data.result || data.results?.[0]?.text || "";
 }
 
-async function synthesizeSpeech(config, text) {
+function guessSiliconFlowVoice(text, lang) {
+  if (lang === "en" || lang === "en-US") return "anna";
+  if (/^[\x00-\x7F\s.,!?;:'"()\-]+$/.test(text || "")) return "anna";
+  return "longxiaochun";
+}
+
+async function synthesizeSpeech(config, text, lang) {
   if (!config.apiKey) throw new Error("请先配置硅基流动 API Key");
   const provider = MODEL_PROVIDERS.siliconflow;
+  const voice = guessSiliconFlowVoice(text, lang);
   const response = await fetch(provider.voiceOutputUrl, {
     method: "POST",
     headers: {
@@ -529,7 +562,7 @@ async function synthesizeSpeech(config, text) {
     body: JSON.stringify({
       model: config.voiceOutputModel || provider.voiceModels.output[0].id,
       input: text,
-      voice: "default",
+      voice,
       response_format: "mp3",
     }),
   });
@@ -830,6 +863,7 @@ function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose, voiceCapabili
             当前模型：{MODEL_PROVIDERS[activeProvider]?.name || "未选择"}
             <br />语音输入：{voiceCapability.input ? "已启用" : "不可用"}
             <br />语音播报：{voiceCapability.output ? "已启用" : "降级为系统朗读"}
+            {activeProvider === "minimax" && <><br />MiniMax 新模型已更新，若旧接口报错可补填 Group ID。</>}
             {voiceCapability.reason && <><br />{voiceCapability.reason}</>}
           </div>
 
@@ -1037,9 +1071,19 @@ export default function App() {
     }
     try {
       setVoiceError("");
+      if (typeof DeviceMotionEvent !== "undefined" && window.Capacitor?.isNativePlatform?.()) {
+        // no-op: keep native branch detection lightweight
+      }
+      const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
+      permission.getTracks().forEach(track => track.stop());
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const supportedMimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "");
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+        : new MediaRecorder(stream);
       audioChunksRef.current = [];
       recorder.ondataavailable = (event) => event.data?.size && audioChunksRef.current.push(event.data);
       recorder.onerror = () => {
@@ -1050,7 +1094,7 @@ export default function App() {
         setIsRecording(false);
         mediaStreamRef.current?.getTracks?.().forEach(track => track.stop());
         mediaStreamRef.current = null;
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType || "audio/webm" });
         audioChunksRef.current = [];
         if (!audioBlob.size) return;
         try {
@@ -1068,7 +1112,10 @@ export default function App() {
       recorder.start();
       setIsRecording(true);
     } catch (error) {
-      setVoiceError(error.message || "无法启动录音，请检查麦克风权限");
+      const message = /denied|permission/i.test(error?.message || "")
+        ? "麦克风权限被拒绝，请到系统设置中允许录音权限"
+        : (error.message || "无法启动录音，请检查麦克风权限");
+      setVoiceError(message);
       setIsRecording(false);
     }
   };
@@ -1085,7 +1132,7 @@ export default function App() {
       setVoiceError("");
       if (modelConfigs.siliconflow?.apiKey) {
         setIsSpeaking(true);
-        const blob = await synthesizeSpeech(modelConfigs.siliconflow, text);
+        const blob = await synthesizeSpeech(modelConfigs.siliconflow, text, teacher.lang || "zh-CN");
         const objectUrl = URL.createObjectURL(blob);
         audioPlayerRef.current?.pause();
         const audio = new Audio(objectUrl);
