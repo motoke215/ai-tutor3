@@ -1,5 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Settings, Users, Plus, Trash2 } from "lucide-react";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
+
+const NativeAudioPermissions = Capacitor.isNativePlatform()
+  ? registerPlugin("NativeAudioPermissions")
+  : null;
+
+function normalizePermissionState(state) {
+  const value = String(state || "prompt").toLowerCase();
+  if (["granted", "denied", "prompt", "prompt-with-rationale"].includes(value)) return value;
+  if (value === "promptwithrationale") return "prompt-with-rationale";
+  return "prompt";
+}
 
 const THEMES = {
   amber: {
@@ -76,8 +89,7 @@ const MODEL_PROVIDERS = {
       { id: "MiniMax-M2.5", name: "MiniMax M2.5", desc: "稳定对话与推理" },
       { id: "MiniMax-M2", name: "MiniMax M2", desc: "通用对话模型" },
       { id: "MiniMax-M2.1", name: "MiniMax M2.1", desc: "轻量高性价比" },
-      { id: "MiniMax-M2-Her", name: "MiniMax M2-her", desc: "角色陪伴风格" },
-      { id: "abab7-preview", name: "ABAB7 Preview", desc: "兼容旧版账号" },
+      { id: "MiniMax-M2-Her", name: "MiniMax M2-Her", desc: "角色陪伴风格" },
     ],
   },
   siliconflow: {
@@ -212,8 +224,87 @@ const masteryLabel = (v) => {
   return ["已经掌握", "✨"];
 };
 
-function buildSystem(subject, level, goal, teacher) {
-  return `${teacher.style}
+function getPermissionErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  const name = String(error?.name || "");
+  const combined = `${name} ${message}`.toLowerCase();
+  if (/permission|denied|notallowed|security|forbidden/.test(combined)) {
+    return "麦克风权限被拒绝，请到系统设置 → 应用 → AI一对一私教 → 权限中开启麦克风后重试";
+  }
+  if (/notfound|device not found|found no microphone|input device/.test(combined)) {
+    return "未检测到可用麦克风，请确认设备已连接并可正常录音";
+  }
+  if (/notreadable|trackstart|hardware/.test(combined)) {
+    return "麦克风当前被其他应用占用，请关闭占用后重试";
+  }
+  return message || "无法启动录音，请检查麦克风权限";
+}
+
+async function queryNativeMicrophonePermission() {
+  if (!NativeAudioPermissions) return null;
+  try {
+    const result = await NativeAudioPermissions.checkPermissions();
+    return normalizePermissionState(result?.microphone);
+  } catch {
+    return null;
+  }
+}
+
+async function requestNativeMicrophonePermission() {
+  if (!NativeAudioPermissions) return null;
+  try {
+    const result = await NativeAudioPermissions.requestPermissions();
+    return normalizePermissionState(result?.microphone);
+  } catch {
+    return null;
+  }
+}
+
+async function openNativeAppSettings() {
+  if (!NativeAudioPermissions) return false;
+  try {
+    await NativeAudioPermissions.openAppSettings();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function queryMicrophonePermission() {
+  const nativeState = await queryNativeMicrophonePermission();
+  if (nativeState) return nativeState;
+  if (!navigator.permissions?.query) return "prompt";
+  try {
+    const status = await navigator.permissions.query({ name: "microphone" });
+    return status?.state || "prompt";
+  } catch {
+    return "prompt";
+  }
+}
+
+function isLikelyVoiceInvalid(errorText) {
+  return /invalid voice|voice.*invalid|unsupported voice|unknown voice|"code"\s*:\s*20047/i.test(String(errorText || ""));
+}
+
+function normalizeSiliconFlowVoiceName(voice) {
+  const value = String(voice || "").trim().toLowerCase();
+  const aliasMap = {
+    anna: "anna",
+    longxiaochun: "longxiaochun",
+    otetsu: "otetsu",
+    yunjian: "yunjian",
+    "fishaudio/anna": "anna",
+    "fishaudio/longxiaochun": "longxiaochun",
+    "fishaudio/otetsu": "otetsu",
+    "fishaudio/yunjian": "yunjian",
+    "funaudiollm/cosyvoice2-0.5b:anna": "anna",
+    "funaudiollm/cosyvoice2-0.5b:longxiaochun": "longxiaochun",
+    "funaudiollm/cosyvoice2-0.5b:otetsu": "otetsu",
+    "funaudiollm/cosyvoice2-0.5b:yunjian": "yunjian",
+  };
+  return aliasMap[value] || String(voice || "").trim();
+}
+
 
 你正在辅导学生学习「${subject}」，学生水平：${level}，目标：${goal || "全面掌握"}。
 
@@ -365,6 +456,14 @@ function loadGlobalSettings() {
 
 function saveGlobalSettings(settings) {
   localStorage.setItem(STORAGE_KEYS.GLOBAL_SETTINGS, JSON.stringify(settings));
+}
+
+function loadPermissionPrompted() {
+  return !!loadGlobalSettings().permissionPrompted;
+}
+
+function savePermissionPrompted(value) {
+  saveGlobalSettings({ ...loadGlobalSettings(), permissionPrompted: !!value });
 }
 
 function loadProgress(userId, subject) {
@@ -544,35 +643,55 @@ async function transcribeAudio(config, blob, lang) {
 }
 
 function guessSiliconFlowVoice(text, lang) {
-  if (lang === "en" || lang === "en-US") return "anna";
-  if (/^[\x00-\x7F\s.,!?;:'"()\-]+$/.test(text || "")) return "anna";
-  return "longxiaochun";
+  const normalizedLang = String(lang || "").toLowerCase();
+  const normalizedText = String(text || "");
+  if (normalizedLang.startsWith("en") || /^[\x00-\x7F\s.,!?;:'"()\-]+$/.test(normalizedText)) {
+    return "FunAudioLLM/CosyVoice2-0.5B:anna";
+  }
+  if (normalizedLang.startsWith("ja")) return "FunAudioLLM/CosyVoice2-0.5B:otetsu";
+  if (normalizedLang.startsWith("ko")) return "FunAudioLLM/CosyVoice2-0.5B:yunjian";
+  return "FunAudioLLM/CosyVoice2-0.5B:longxiaochun";
 }
 
 async function synthesizeSpeech(config, text, lang) {
   if (!config.apiKey) throw new Error("请先配置硅基流动 API Key");
   const provider = MODEL_PROVIDERS.siliconflow;
-  const voice = guessSiliconFlowVoice(text, lang);
-  const response = await fetch(provider.voiceOutputUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: config.voiceOutputModel || provider.voiceModels.output[0].id,
-      input: text,
-      voice,
-      response_format: "mp3",
-    }),
-  });
+  const voicesToTry = Array.from(new Set([
+    normalizeSiliconFlowVoiceName(guessSiliconFlowVoice(text, lang)),
+    normalizeSiliconFlowVoiceName(String(lang || "").toLowerCase().startsWith("en") ? "anna" : "longxiaochun"),
+    "longxiaochun",
+    "anna",
+  ].filter(Boolean)));
 
-  if (!response.ok) {
+  let lastErrorText = "";
+
+  for (const voice of voicesToTry) {
+    const response = await fetch(provider.voiceOutputUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: config.voiceOutputModel || provider.voiceModels.output[0].id,
+        input: text,
+        voice,
+        response_format: "mp3",
+      }),
+    });
+
+    if (response.ok) {
+      return response.blob();
+    }
+
     const errorText = await response.text().catch(() => "");
-    throw new Error(`语音播报失败 [${response.status}] ${errorText.slice(0, 120)}`.trim());
+    lastErrorText = errorText;
+    if (!isLikelyVoiceInvalid(errorText)) {
+      throw new Error(`语音播报失败 [${response.status}] ${errorText.slice(0, 120)}`.trim());
+    }
   }
 
-  return response.blob();
+  throw new Error(`语音播报失败 [400] ${lastErrorText.slice(0, 120)}`.trim() || "语音播报失败：当前 voice 参数不可用");
 }
 
 function ModelConfigPanel({ T, configs, setConfigs, activeProvider, setActiveProvider, onClose }) {
@@ -835,7 +954,7 @@ function UserCenterPanel({ T, currentUser, users, onClose, onSwitchUser, onAddUs
   );
 }
 
-function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose, voiceCapability, activeProvider }) {
+function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose, voiceCapability, activeProvider, voicePermissionState, onRequestMicrophonePermission, onOpenSystemPermissionSettings, permissionPrompted }) {
   const [voices, setVoices] = useState([]);
 
   useEffect(() => {
@@ -862,9 +981,21 @@ function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose, voiceCapabili
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 12, fontSize: 12, color: T.textDim, lineHeight: 1.7 }}>
             当前模型：{MODEL_PROVIDERS[activeProvider]?.name || "未选择"}
             <br />语音输入：{voiceCapability.input ? "已启用" : "不可用"}
-            <br />语音播报：{voiceCapability.output ? "已启用" : "降级为系统朗读"}
-            {activeProvider === "minimax" && <><br />MiniMax 新模型已更新，若旧接口报错可补填 Group ID。</>}
+            <br />麦克风权限：{voicePermissionState === "granted" ? "已授权" : voicePermissionState === "denied" ? "已拒绝" : voicePermissionState === "prompt-with-rationale" ? "需要再次确认" : voicePermissionState === "unsupported" ? "当前环境不支持查询" : permissionPrompted ? "已请求，等待系统确认" : "待请求"}
+            <br />权限列表状态：{voicePermissionState === "granted" || voicePermissionState === "denied" || voicePermissionState === "prompt-with-rationale" ? "系统已登记麦克风权限" : permissionPrompted ? "已触发申请，等待系统登记" : "尚未触发申请，所以权限页可能为空"}
+            <br />扬声器说明：Android 系统通常不会单独显示“扬声器/喇叭”权限；播放语音默认不需要额外授权。
+            <br />如果系统权限页里没有任何可切换项，通常是因为当前安装包还没真正触发过运行时权限请求；请先点一次下方“请求麦克风权限”，完成系统弹窗后再回到权限页查看。
+            {activeProvider === "minimax" && <><br />MiniMax 模型名称已按新版本保留，若旧接口报错可补填 Group ID。</>}
             {voiceCapability.reason && <><br />{voiceCapability.reason}</>}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button onClick={onRequestMicrophonePermission} style={{ background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`, border: "none", borderRadius: 10, padding: "10px 14px", color: T.userText, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              {voicePermissionState === "granted" ? "重新检测麦克风权限" : "请求麦克风权限"}
+            </button>
+            <button onClick={onOpenSystemPermissionSettings} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              打开系统权限设置
+            </button>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -993,10 +1124,12 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [apiHistory, setApiHistory] = useState([]);
   const [teacher, setTeacher] = useState(DEFAULT_TEACHER);
+  const [voiceCapability, setVoiceCapability] = useState({ input: false, output: false, reason: "" });
+  const [voicePermissionState, setVoicePermissionState] = useState("prompt");
+  const [voiceError, setVoiceError] = useState("");
+  const [permissionPrompted, setPermissionPrompted] = useState(loadPermissionPrompted);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceCapability, setVoiceCapability] = useState({ input: false, output: false, reason: "" });
-  const [voiceError, setVoiceError] = useState("");
   const [showThemes, setShowThemes] = useState(false);
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [showUserCenter, setShowUserCenter] = useState(false);
@@ -1015,15 +1148,45 @@ export default function App() {
   const autoSaveTimerRef = useRef(null);
 
   useEffect(() => {
-    const canRecord = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
-    const canSpeak = !!window.speechSynthesis;
-    const supportsSiliconVoice = !!modelConfigs.siliconflow?.apiKey;
-    setVoiceCapability({
-      input: canRecord && supportsSiliconVoice,
-      output: canSpeak || supportsSiliconVoice,
-      reason: !supportsSiliconVoice ? "请先配置硅基流动 API Key 以启用手机语音识别。" : "",
-    });
-    if (canSpeak) synthRef.current = window.speechSynthesis;
+    let active = true;
+
+    const syncVoiceCapability = async () => {
+      const canRecord = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+      const canSpeak = !!window.speechSynthesis;
+      const supportsSiliconVoice = !!modelConfigs.siliconflow?.apiKey;
+      const permissionState = canRecord ? await queryMicrophonePermission() : "unsupported";
+      if (!active) return;
+
+      setVoicePermissionState(permissionState);
+      setVoiceCapability({
+        input: canRecord && supportsSiliconVoice,
+        output: canSpeak || supportsSiliconVoice,
+        reason: !supportsSiliconVoice
+          ? "请先配置硅基流动 API Key 以启用手机语音识别。"
+          : permissionState === "denied"
+            ? "麦克风权限已被系统拒绝，请到系统设置 → 应用 → AI一对一私教 → 权限中开启麦克风。"
+            : permissionState === "granted"
+              ? "麦克风权限已获取；安卓系统不会单独提供“扬声器”权限，语音播放默认可直接使用。"
+              : permissionState === "prompt-with-rationale"
+                ? "系统建议再次请求麦克风权限；确认后权限页会显示“麦克风”。"
+                : Capacitor.isNativePlatform()
+                  ? "点击下方麦克风按钮后，系统会弹出麦克风授权；安卓不会单独提供“扬声器”权限。"
+                  : "浏览器/系统不会显示“扬声器”权限，播放语音默认无需单独授权。",
+      });
+
+      if (canSpeak) synthRef.current = window.speechSynthesis;
+    };
+
+    syncVoiceCapability();
+
+    const restoreListener = Capacitor.isNativePlatform()
+      ? CapacitorApp.addListener("resume", syncVoiceCapability)
+      : null;
+
+    return () => {
+      active = false;
+      restoreListener?.then?.(listener => listener.remove());
+    };
   }, [modelConfigs.siliconflow?.apiKey]);
 
   useEffect(() => {
@@ -1063,20 +1226,77 @@ export default function App() {
     }
   }, [phase, currentUser]);
 
+  useEffect(() => {
+    savePermissionPrompted(permissionPrompted);
+  }, [permissionPrompted]);
+
+  const requestMicrophonePermission = useCallback(async () => {
+    setPermissionPrompted(true);
+    if (Capacitor.isNativePlatform()) {
+      const nativeRequest = await requestNativeMicrophonePermission();
+      if (nativeRequest === "denied") {
+        setVoicePermissionState("denied");
+        setVoiceCapability(prev => ({
+          ...prev,
+          reason: "麦克风权限已被系统拒绝，请到系统设置 → 应用 → AI一对一私教 → 权限中开启麦克风。",
+        }));
+        setVoiceError("系统已拒绝麦克风权限，请在系统设置中手动开启后再试");
+        return false;
+      }
+      if (nativeRequest === "granted") {
+        setVoicePermissionState("granted");
+      }
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setVoiceError("当前设备不支持麦克风录音");
+      setVoicePermissionState("unsupported");
+      return false;
+    }
+    try {
+      setVoiceError("");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      const refreshedState = await queryMicrophonePermission();
+      setVoicePermissionState(refreshedState === "prompt" ? "granted" : refreshedState);
+      setVoiceCapability(prev => ({
+        ...prev,
+        input: true,
+        reason: modelConfigs.siliconflow?.apiKey
+          ? "麦克风权限已获取；安卓系统权限页通常只显示“麦克风”，不会单独显示扬声器权限。"
+          : "麦克风权限已获取；如需语音识别，请先配置硅基流动 API Key。",
+      }));
+      return true;
+    } catch (error) {
+      const permissionState = /denied|permission|notallowed|security/i.test(String(error?.message || error?.name || "")) ? "denied" : "prompt";
+      setVoicePermissionState(permissionState);
+      setVoiceCapability(prev => ({
+        ...prev,
+        reason: permissionState === "denied"
+          ? "麦克风权限已被系统拒绝，请到系统设置 → 应用 → AI一对一私教 → 权限中开启麦克风。"
+          : prev.reason,
+      }));
+      setVoiceError(getPermissionErrorMessage(error));
+      return false;
+    }
+  }, [modelConfigs.siliconflow?.apiKey]);
+
   const startRecording = async () => {
     if (!voiceSettings.enabled || voiceSettings.voiceMode === "text") return;
     if (!voiceCapability.input) {
       setVoiceError(voiceCapability.reason || "当前设备不支持语音输入");
       return;
     }
+    const permissionGranted = await requestMicrophonePermission();
+    if (!permissionGranted) return;
     try {
       setVoiceError("");
-      if (typeof DeviceMotionEvent !== "undefined" && window.Capacitor?.isNativePlatform?.()) {
-        // no-op: keep native branch detection lightweight
-      }
-      const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
-      permission.getTracks().forEach(track => track.stop());
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       mediaStreamRef.current = stream;
       const supportedMimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
@@ -1112,10 +1332,7 @@ export default function App() {
       recorder.start();
       setIsRecording(true);
     } catch (error) {
-      const message = /denied|permission/i.test(error?.message || "")
-        ? "麦克风权限被拒绝，请到系统设置中允许录音权限"
-        : (error.message || "无法启动录音，请检查麦克风权限");
-      setVoiceError(message);
+      setVoiceError(getPermissionErrorMessage(error));
       setIsRecording(false);
     }
   };
@@ -1155,7 +1372,10 @@ export default function App() {
         await audio.play();
         return;
       }
-      if (!synthRef.current) return;
+      if (!synthRef.current) {
+        setVoiceError("当前设备没有可用的系统朗读能力");
+        return;
+      }
       synthRef.current.cancel();
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = teacher.lang || "zh-CN";
@@ -1306,12 +1526,19 @@ export default function App() {
   const handleUpdateVoiceSettings = (updates) => {
     const newSettings = { ...voiceSettings, ...updates };
     setVoiceSettings(newSettings);
-    saveGlobalSettings({ ...loadGlobalSettings(), voiceSettings: newSettings, themeId });
+    saveGlobalSettings({ ...loadGlobalSettings(), voiceSettings: newSettings, themeId, permissionPrompted });
+  };
+
+  const handleOpenSystemPermissionSettings = async () => {
+    const opened = await openNativeAppSettings();
+    if (!opened) {
+      setVoiceError("当前环境无法直接打开系统权限设置，请手动前往系统设置开启麦克风权限");
+    }
   };
 
   const handleChangeTheme = (newThemeId) => {
     setThemeId(newThemeId);
-    saveGlobalSettings({ ...loadGlobalSettings(), themeId: newThemeId, voiceSettings });
+    saveGlobalSettings({ ...loadGlobalSettings(), themeId: newThemeId, voiceSettings, permissionPrompted });
   };
 
   const MODE_INFO = {
@@ -1462,6 +1689,11 @@ export default function App() {
       <div style={{ padding: "10px 16px 16px", borderTop: `1px solid ${T.border}`, maxWidth: 780, width: "100%", margin: "0 auto", flexShrink: 0, position: "relative", zIndex: 10 }}>
         {isSpeaking && <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 12, color: T.accent }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: T.accent, animation: "pulse 1s infinite" }} />{teacher.name}正在朗读… <button onClick={stopSpeaking} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>停止</button></div>}
         {voiceError && <div style={{ marginBottom: 8, fontSize: 12, color: "#f87171" }}>{voiceError}</div>}
+        {voiceSettings.enabled && modelConfigs.siliconflow?.apiKey && voicePermissionState !== "granted" && (
+          <div style={{ marginBottom: 8, fontSize: 12, color: T.textMuted }}>
+            麦克风尚未授权。点击左侧麦克风会触发系统授权；安卓系统不会显示单独的“扬声器权限”。
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
           {voiceSettings.enabled && voiceSettings.voiceMode !== "text" && <button onClick={isRecording ? stopRecording : startRecording} disabled={loading} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: isRecording ? "#f87171" : T.surface, borderColor: isRecording ? "#f87171" : T.border, borderStyle: "solid", borderWidth: 1, color: isRecording ? "#fff" : T.textMuted, cursor: loading ? "not-allowed" : "pointer", fontSize: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", animation: isRecording ? "recordPulse 1.5s infinite" : "none" }} title={isRecording ? "停止录音" : "语音输入"}>{isRecording ? "⏹" : "🎙"}</button>}
           <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }} disabled={loading} placeholder={isRecording ? `正在录音（${teacher.lang === "en-US" ? "请说英语" : "请说话"}）…` : "输入你的回答或问题… (Enter发送，Shift+Enter换行)"} rows={1} style={{ flex: 1, background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", color: T.text, fontSize: 14, lineHeight: 1.5, resize: "none", fontFamily: "inherit", minHeight: 46, maxHeight: 120, boxShadow: "none" }} />
@@ -1472,7 +1704,7 @@ export default function App() {
 
       {showModelConfig && <ModelConfigPanel T={T} configs={modelConfigs} setConfigs={setModelConfigs} activeProvider={activeProvider} setActiveProvider={setActiveProvider} onClose={() => setShowModelConfig(false)} />}
       {showUserCenter && <UserCenterPanel T={T} currentUser={currentUser} users={users} onClose={() => setShowUserCenter(false)} onSwitchUser={handleSwitchUser} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} />}
-      {showVoiceSettings && <VoiceSettingsPanel T={T} voiceSettings={voiceSettings} onUpdate={handleUpdateVoiceSettings} onClose={() => setShowVoiceSettings(false)} voiceCapability={voiceCapability} activeProvider={activeProvider} />}
+      {showVoiceSettings && <VoiceSettingsPanel T={T} voiceSettings={voiceSettings} onUpdate={handleUpdateVoiceSettings} onClose={() => setShowVoiceSettings(false)} voiceCapability={voiceCapability} activeProvider={activeProvider} voicePermissionState={voicePermissionState} onRequestMicrophonePermission={requestMicrophonePermission} onOpenSystemPermissionSettings={handleOpenSystemPermissionSettings} permissionPrompted={permissionPrompted} />}
     </div>
   );
 }
