@@ -1,9 +1,6 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Mic, MicOff, Volume2, VolumeX, Sun, Moon, Settings, ChevronLeft, Send, User, Users, Plus, Trash2, Edit3, Check, X, ChevronDown, ChevronUp, Play, Pause, SkipBack, Globe, Zap } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Settings, Users, Plus, Trash2 } from "lucide-react";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// THEME SYSTEM — 4 visual styles
-// ═══════════════════════════════════════════════════════════════════════════════
 const THEMES = {
   amber: {
     id: "amber", name: "暗夜琥珀", icon: "🌙",
@@ -51,91 +48,100 @@ const THEMES = {
   },
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MODEL PROVIDERS CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
 const MODEL_PROVIDERS = {
   deepseek: {
-    name: 'DeepSeek',
-    icon: '🔵',
-    color: '#346cla',
-    defaultUrl: 'https://api.deepseek.com/v1',
-    endpoint: '/chat/completions',
+    id: "deepseek",
+    name: "DeepSeek",
+    icon: "🔵",
+    color: "#346cf0",
+    defaultUrl: "https://api.deepseek.com/v1",
+    endpoint: "/chat/completions",
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek Chat', desc: '通用对话模型' },
-      { id: 'deepseek-coder', name: 'DeepSeek Coder', desc: '代码专用模型' },
+      { id: "deepseek-chat", name: "DeepSeek Chat", desc: "通用对话模型" },
+      { id: "deepseek-coder", name: "DeepSeek Coder", desc: "代码专用模型" },
     ],
   },
   minimax: {
-    name: 'MiniMax',
-    icon: '🟠',
-    color: '#ff6b35',
-    defaultUrl: 'https://api.minimax.chat/v1',
-    endpoint: '/text/chatcompletion_v2',
+    id: "minimax",
+    name: "MiniMax",
+    icon: "🟠",
+    color: "#ff6b35",
+    defaultUrl: "https://api.minimax.chat/v1",
+    endpoint: "/text/chatcompletion_v2",
+    extraFields: [
+      { id: "groupId", label: "Group ID", placeholder: "输入 MiniMax Group ID" },
+    ],
     models: [
-      { id: 'abab6.5s', name: 'ABAB6.5s', desc: '245k上下文 · 通用场景' },
-      { id: 'abab6.5t', name: 'ABAB6.5t', desc: '8k上下文 · AI陪伴' },
-      { id: 'abab6.5g', name: 'ABAB6.5g', desc: '8k上下文 · 英文陪伴' },
-      { id: 'abab7-preview', name: 'ABAB7 Preview', desc: '最新旗舰' },
+      { id: "abab6.5s", name: "ABAB6.5s", desc: "245k上下文 · 通用场景" },
+      { id: "abab6.5t", name: "ABAB6.5t", desc: "8k上下文 · AI陪伴" },
+      { id: "abab6.5g", name: "ABAB6.5g", desc: "8k上下文 · 英文陪伴" },
+      { id: "abab7-preview", name: "ABAB7 Preview", desc: "最新旗舰" },
     ],
   },
   siliconflow: {
-    name: '硅基流动',
-    icon: '💧',
-    color: '#00d4aa',
-    defaultUrl: 'https://api.siliconflow.cn/v1',
-    endpoint: '/chat/completions',
+    id: "siliconflow",
+    name: "硅基流动",
+    icon: "💧",
+    color: "#00d4aa",
+    defaultUrl: "https://api.siliconflow.cn/v1",
+    endpoint: "/chat/completions",
+    voiceInputUrl: "https://api.siliconflow.cn/v1/audio/transcriptions",
+    voiceOutputUrl: "https://api.siliconflow.cn/v1/audio/speech",
+    voiceModels: {
+      input: [{ id: "FunAudioLLM/SenseVoiceSmall", name: "SenseVoiceSmall" }],
+      output: [{ id: "FunAudioLLM/CosyVoice2-0.5B", name: "CosyVoice2" }],
+    },
     models: [
-      { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5-72B', desc: '旗舰模型' },
-      { id: 'Qwen/Qwen2.5-14B-Instruct', name: 'Qwen2.5-14B', desc: '更强推理' },
-      { id: 'Qwen/Qwen2.5-7B-Instruct', name: 'Qwen2.5-7B', desc: '通识对话' },
-      { id: 'deepseek-ai/DeepSeek-V2.5', name: 'DeepSeek-V2.5', desc: '最新融合模型' },
-      { id: 'THUDM/glm-4-9b-chat', name: 'GLM-4-9B', desc: '智谱4代9B' },
-      { id: 'meta-llama/Llama-3.1-70B-Instruct', name: 'Llama-3.1-70B', desc: 'Meta 3.1 70B' },
+      { id: "Qwen/Qwen2.5-72B-Instruct", name: "Qwen2.5-72B", desc: "旗舰模型" },
+      { id: "Qwen/Qwen2.5-14B-Instruct", name: "Qwen2.5-14B", desc: "更强推理" },
+      { id: "Qwen/Qwen2.5-7B-Instruct", name: "Qwen2.5-7B", desc: "通识对话" },
+      { id: "deepseek-ai/DeepSeek-V2.5", name: "DeepSeek-V2.5", desc: "最新融合模型" },
+      { id: "THUDM/glm-4-9b-chat", name: "GLM-4-9B", desc: "智谱4代9B" },
+      { id: "meta-llama/Llama-3.1-70B-Instruct", name: "Llama-3.1-70B", desc: "Meta 3.1 70B" },
     ],
   },
   dashscope: {
-    name: '阿里通义',
-    icon: '🔶',
-    color: '#ff6a00',
-    defaultUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    endpoint: '/chat/completions',
+    id: "dashscope",
+    name: "阿里通义",
+    icon: "🔶",
+    color: "#ff6a00",
+    defaultUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    endpoint: "/chat/completions",
     models: [
-      { id: 'qwen-turbo', name: 'Qwen Turbo', desc: '快速版' },
-      { id: 'qwen-plus', name: 'Qwen Plus', desc: '增强版' },
-      { id: 'qwen-max', name: 'Qwen Max', desc: '最强版' },
+      { id: "qwen-turbo", name: "Qwen Turbo", desc: "快速版" },
+      { id: "qwen-plus", name: "Qwen Plus", desc: "增强版" },
+      { id: "qwen-max", name: "Qwen Max", desc: "最强版" },
     ],
   },
   openai: {
-    name: 'OpenAI',
-    icon: '⚫',
-    color: '#10a37f',
-    defaultUrl: 'https://api.openai.com/v1',
-    endpoint: '/chat/completions',
+    id: "openai",
+    name: "OpenAI",
+    icon: "⚫",
+    color: "#10a37f",
+    defaultUrl: "https://api.openai.com/v1",
+    endpoint: "/chat/completions",
     models: [
-      { id: 'gpt-4o', name: 'GPT-4o', desc: '最新旗舰' },
-      { id: 'gpt-4o-mini', name: 'GPT-4o Mini', desc: '轻量快速' },
-      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', desc: 'Turbo版' },
-      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', desc: '经典模型' },
+      { id: "gpt-4o", name: "GPT-4o", desc: "最新旗舰" },
+      { id: "gpt-4o-mini", name: "GPT-4o Mini", desc: "轻量快速" },
+      { id: "gpt-4-turbo", name: "GPT-4 Turbo", desc: "Turbo版" },
+      { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", desc: "经典模型" },
     ],
   },
   anthropic: {
-    name: 'Anthropic',
-    icon: '🟤',
-    color: '#d4a574',
-    defaultUrl: 'https://api.anthropic.com/v1',
-    endpoint: '/messages',
+    id: "anthropic",
+    name: "Anthropic",
+    icon: "🟤",
+    color: "#d4a574",
+    defaultUrl: "https://api.anthropic.com/v1",
+    endpoint: "/messages",
     models: [
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', desc: '均衡智能' },
-      { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', desc: '最强推理' },
-      { id: 'claude-haiku-4-20250514', name: 'Claude Haiku 4', desc: '快速响应' },
+      { id: "claude-3-5-sonnet-latest", name: "Claude 3.5 Sonnet", desc: "均衡智能" },
+      { id: "claude-3-5-haiku-latest", name: "Claude 3.5 Haiku", desc: "快速响应" },
+      { id: "claude-3-opus-latest", name: "Claude 3 Opus", desc: "更强推理" },
     ],
   },
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEACHER PERSONAS
-// ═══════════════════════════════════════════════════════════════════════════════
 const TEACHERS = [
   {
     keys: ["python","javascript","js","编程","代码","code","react","vue","算法","数据结构","typescript","java","c++","rust","go","swift"],
@@ -174,21 +180,28 @@ const DEFAULT_TEACHER = {
   style: "你是一位博学通才的导师，善于从多角度切入任何知识领域，因材施教，充满耐心",
 };
 
+const STORAGE_KEYS = {
+  USERS: "tutor_users",
+  CURRENT_USER: "tutor_current_user",
+  MODEL_CONFIGS: "tutor_model_configs",
+  ACTIVE_PROVIDER: "tutor_active_provider",
+  GLOBAL_SETTINGS: "tutor_global_settings",
+  PROGRESS_PREFIX: "tutor_progress_",
+};
+
 function getTeacher(subject) {
   if (!subject) return DEFAULT_TEACHER;
   const lower = subject.toLowerCase();
   return TEACHERS.find(t => t.keys.some(k => lower.includes(k))) || DEFAULT_TEACHER;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MASTERY HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
 const masteryColor = (v) => {
   if (v < 30) return "#f87171";
   if (v < 60) return "#fb923c";
   if (v < 80) return "#facc15";
   return "#4ade80";
 };
+
 const masteryLabel = (v) => {
   if (v < 20) return ["继续加油", "💪"];
   if (v < 50) return ["初见端倪", "🌱"];
@@ -197,9 +210,6 @@ const masteryLabel = (v) => {
   return ["已经掌握", "✨"];
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SYSTEM PROMPT BUILDER
-// ═══════════════════════════════════════════════════════════════════════════════
 function buildSystem(subject, level, goal, teacher) {
   return `${teacher.style}
 
@@ -231,10 +241,7 @@ function buildSystem(subject, level, goal, teacher) {
 }`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MASTERY RING
-// ═══════════════════════════════════════════════════════════════════════════════
-function MasteryRing({ value, accent }) {
+function MasteryRing({ value }) {
   const r = 26, c = 32, stroke = 5;
   const circ = 2 * Math.PI * r;
   const dash = (value / 100) * circ;
@@ -243,8 +250,12 @@ function MasteryRing({ value, accent }) {
     <svg width={64} height={64}>
       <circle cx={c} cy={c} r={r} fill="none" stroke="rgba(128,128,128,0.2)" strokeWidth={stroke} />
       <circle
-        cx={c} cy={c} r={r} fill="none"
-        stroke={col} strokeWidth={stroke}
+        cx={c}
+        cy={c}
+        r={r}
+        fill="none"
+        stroke={col}
+        strokeWidth={stroke}
         strokeDasharray={`${dash} ${circ}`}
         strokeLinecap="round"
         transform={`rotate(-90 ${c} ${c})`}
@@ -255,9 +266,6 @@ function MasteryRing({ value, accent }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TYPING DOTS
-// ═══════════════════════════════════════════════════════════════════════════════
 function TypingDots({ T, teacher }) {
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -275,27 +283,17 @@ function TypingDots({ T, teacher }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STORAGE HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-const STORAGE_KEYS = {
-  USERS: 'tutor_users',
-  CURRENT_USER: 'tutor_current_user',
-  MODEL_CONFIGS: 'tutor_model_configs',
-  ACTIVE_PROVIDER: 'tutor_active_provider',
-  GLOBAL_SETTINGS: 'tutor_global_settings',
-  PROGRESS_PREFIX: 'tutor_progress_',
-};
-
 function generateId() {
-  return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  return "id_" + Date.now() + "_" + Math.random().toString(36).slice(2, 11);
 }
 
 function loadUsers() {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.USERS);
     return data ? JSON.parse(data) : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function saveUsers(users) {
@@ -307,37 +305,47 @@ function loadCurrentUserId() {
 }
 
 function saveCurrentUserId(userId) {
-  if (userId) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, userId);
-  } else {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-  }
+  if (userId) localStorage.setItem(STORAGE_KEYS.CURRENT_USER, userId);
+  else localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+}
+
+function normalizeProviderConfig(raw = {}, providerId) {
+  const source = raw?.[providerId];
+  const provider = MODEL_PROVIDERS[providerId];
+  const config = typeof source === "object" && source ? source : {};
+  return {
+    apiKey: typeof config.apiKey === "string" ? config.apiKey : "",
+    model: typeof config.model === "string" ? config.model : provider?.models?.[0]?.id || "",
+    groupId: typeof config.groupId === "string" ? config.groupId : "",
+    voiceInputModel: typeof config.voiceInputModel === "string" ? config.voiceInputModel : provider?.voiceModels?.input?.[0]?.id || "",
+    voiceOutputModel: typeof config.voiceOutputModel === "string" ? config.voiceOutputModel : provider?.voiceModels?.output?.[0]?.id || "",
+  };
+}
+
+function normalizeModelConfigs(rawConfigs = {}) {
+  return Object.keys(MODEL_PROVIDERS).reduce((acc, providerId) => {
+    acc[providerId] = normalizeProviderConfig(rawConfigs, providerId);
+    return acc;
+  }, {});
 }
 
 function loadModelConfigs() {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.MODEL_CONFIGS);
-    if (!data) return {};
-
-    const parsed = JSON.parse(data);
-
-    // 检查是否是旧格式（直接存储apiKey而不是按provider存储）
-    if (parsed && parsed.apiKey && !parsed.deepseek && !parsed.minimax) {
-      // 旧格式：{apiKey: "xxx", model: "xxx"} - 需要迁移
-      console.log('检测到旧格式配置，正在迁移...');
-      return {}; // 返回空，让用户重新配置
-    }
-
-    return parsed;
-  } catch { return {}; }
+    if (!data) return normalizeModelConfigs();
+    return normalizeModelConfigs(JSON.parse(data));
+  } catch {
+    return normalizeModelConfigs();
+  }
 }
 
 function saveModelConfigs(configs) {
-  localStorage.setItem(STORAGE_KEYS.MODEL_CONFIGS, JSON.stringify(configs));
+  localStorage.setItem(STORAGE_KEYS.MODEL_CONFIGS, JSON.stringify(normalizeModelConfigs(configs)));
 }
 
 function loadActiveProvider() {
-  return localStorage.getItem(STORAGE_KEYS.ACTIVE_PROVIDER) || 'deepseek';
+  const value = localStorage.getItem(STORAGE_KEYS.ACTIVE_PROVIDER) || "deepseek";
+  return MODEL_PROVIDERS[value] ? value : "deepseek";
 }
 
 function saveActiveProvider(provider) {
@@ -348,7 +356,9 @@ function loadGlobalSettings() {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.GLOBAL_SETTINGS);
     return data ? JSON.parse(data) : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 function saveGlobalSettings(settings) {
@@ -358,15 +368,17 @@ function saveGlobalSettings(settings) {
 function loadProgress(userId, subject) {
   if (!userId) return null;
   try {
-    const key = STORAGE_KEYS.PROGRESS_PREFIX + userId + '_' + subject;
+    const key = STORAGE_KEYS.PROGRESS_PREFIX + userId + "_" + subject;
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveProgress(userId, subject, progress) {
   if (!userId) return;
-  const key = STORAGE_KEYS.PROGRESS_PREFIX + userId + '_' + subject;
+  const key = STORAGE_KEYS.PROGRESS_PREFIX + userId + "_" + subject;
   localStorage.setItem(key, JSON.stringify({ ...progress, lastUpdated: new Date().toISOString() }));
 }
 
@@ -375,8 +387,8 @@ function loadUserProgressList(userId) {
   const results = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith(STORAGE_KEYS.PROGRESS_PREFIX + userId + '_')) {
-      const subject = key.replace(STORAGE_KEYS.PROGRESS_PREFIX + userId + '_', '');
+    if (key && key.startsWith(STORAGE_KEYS.PROGRESS_PREFIX + userId + "_")) {
+      const subject = key.replace(STORAGE_KEYS.PROGRESS_PREFIX + userId + "_", "");
       try {
         const data = JSON.parse(localStorage.getItem(key));
         if (data) results.push({ subject, ...data });
@@ -386,95 +398,150 @@ function loadUserProgressList(userId) {
   return results;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// API CALL ADAPTERS
-// ═══════════════════════════════════════════════════════════════════════════════
-function getEndpoint(providerId) {
-  const provider = MODEL_PROVIDERS[providerId];
-  if (!provider) return '/chat/completions';
-  return provider.endpoint || '/chat/completions';
+function toOpenAIMessage(message) {
+  return { role: message.role, content: typeof message.content === "string" ? message.content : String(message.content || "") };
 }
 
-async function callModelAPI(provider, config, messages, system) {
-  const { apiKey, url, model } = config;
+function toAnthropicMessages(messages) {
+  return messages
+    .filter(message => message.role !== "system")
+    .map(message => ({
+      role: message.role === "assistant" ? "assistant" : "user",
+      content: [{ type: "text", text: typeof message.content === "string" ? message.content : String(message.content || "") }],
+    }));
+}
 
-  if (!apiKey) {
-    throw new Error('请先配置 API Key');
+function extractResponseText(provider, data) {
+  if (provider === "anthropic") {
+    return data.content?.find?.(item => item.type === "text")?.text || "";
   }
-
-  if (!model) {
-    throw new Error('请先选择模型');
+  if (provider === "minimax") {
+    return data.reply || data.choices?.[0]?.message?.content || "";
   }
+  return data.choices?.[0]?.message?.content || "";
+}
 
-  const providerConfig = MODEL_PROVIDERS[provider] || {};
-  // 始终使用默认URL，用户在配置面板看到的URL就是实际调用的URL
-  const baseUrl = providerConfig.defaultUrl || '';
-  const endpoint = getEndpoint(provider);
-
-  let fullUrl = baseUrl;
-  if (!fullUrl.endsWith('/') && !endpoint.startsWith('/')) {
-    fullUrl += '/';
+function buildMiniMaxBody(config, messages, system) {
+  if (!config.groupId) {
+    throw new Error("MiniMax 需要填写 Group ID");
   }
-  fullUrl += endpoint;
-
-  const headers = {
-    'Content-Type': 'application/json',
+  return {
+    model: config.model,
+    messages: messages.map(toOpenAIMessage),
+    temperature: 0.7,
+    tokens_to_generate: 1000,
+    reply_constraints: { sender_type: "BOT", sender_name: "AI Tutor" },
+    bot_setting: [{ bot_name: "AI Tutor", content: system || "You are a helpful assistant." }],
+    group_id: config.groupId,
   };
+}
 
-  let body = {};
-  const messagesWithSystem = system ? [{ role: 'system', content: system }, ...messages] : messages;
+async function callModelAPI(providerId, config, messages, system) {
+  const provider = MODEL_PROVIDERS[providerId];
+  if (!provider) throw new Error("未识别的模型服务商");
+  if (!config.apiKey) throw new Error("请先配置 API Key");
+  if (!config.model) throw new Error("请先选择模型");
 
-  switch (provider) {
-    case 'anthropic':
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
+  const url = `${provider.defaultUrl.replace(/\/$/, "")}${provider.endpoint}`;
+  const headers = { "Content-Type": "application/json" };
+  let body;
+  const messagesWithSystem = system ? [{ role: "system", content: system }, ...messages] : messages;
+
+  switch (providerId) {
+    case "anthropic":
+      headers["x-api-key"] = config.apiKey;
+      headers["anthropic-version"] = "2023-06-01";
       body = {
-        model: model,
+        model: config.model,
         max_tokens: 1000,
-        system: system,
-        messages: messages,
+        system: system || undefined,
+        messages: toAnthropicMessages(messagesWithSystem),
       };
       break;
-
+    case "minimax":
+      headers.Authorization = `Bearer ${config.apiKey}`;
+      body = buildMiniMaxBody(config, messages, system);
+      break;
     default:
-      headers['Authorization'] = `Bearer ${apiKey}`;
+      headers.Authorization = `Bearer ${config.apiKey}`;
       body = {
-        model: model,
-        messages: messagesWithSystem,
+        model: config.model,
+        messages: messagesWithSystem.map(toOpenAIMessage),
         max_tokens: 1000,
         temperature: 0.7,
       };
   }
 
-  const response = await fetch(fullUrl, {
-    method: 'POST',
+  const response = await fetch(url, {
+    method: "POST",
     headers,
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    let errorMsg = `API请求失败 [${response.status} ${response.statusText}]`;
+    const errorText = await response.text().catch(() => "");
     try {
-      const errorData = JSON.parse(errorText || '{}');
-      errorMsg = errorData.error?.message || errorData.message || errorMsg + ': ' + errorText.slice(0, 200);
-    } catch {}
-    throw new Error(errorMsg);
+      const errorData = JSON.parse(errorText || "{}");
+      throw new Error(errorData.error?.message || errorData.base_resp?.status_msg || errorData.message || `API请求失败 [${response.status}]`);
+    } catch {
+      throw new Error(`API请求失败 [${response.status}] ${errorText.slice(0, 160)}`.trim());
+    }
   }
 
   const data = await response.json();
-
-  // Parse response based on provider
-  if (provider === 'anthropic') {
-    return data.content?.[0]?.text || '';
-  } else {
-    return data.choices?.[0]?.message?.content || '';
-  }
+  const content = extractResponseText(providerId, data);
+  if (!content) throw new Error("模型已返回响应，但未解析到可显示内容");
+  return content;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MODEL CONFIG PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
+async function transcribeAudio(config, blob, lang) {
+  if (!config.apiKey) throw new Error("请先配置硅基流动 API Key");
+  const provider = MODEL_PROVIDERS.siliconflow;
+  const formData = new FormData();
+  formData.append("model", config.voiceInputModel || provider.voiceModels.input[0].id);
+  formData.append("language", lang);
+  formData.append("file", blob, "speech.webm");
+
+  const response = await fetch(provider.voiceInputUrl, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.apiKey}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`语音识别失败 [${response.status}] ${errorText.slice(0, 120)}`.trim());
+  }
+
+  const data = await response.json();
+  return data.text || data.result || data.results?.[0]?.text || "";
+}
+
+async function synthesizeSpeech(config, text) {
+  if (!config.apiKey) throw new Error("请先配置硅基流动 API Key");
+  const provider = MODEL_PROVIDERS.siliconflow;
+  const response = await fetch(provider.voiceOutputUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: config.voiceOutputModel || provider.voiceModels.output[0].id,
+      input: text,
+      voice: "default",
+      response_format: "mp3",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`语音播报失败 [${response.status}] ${errorText.slice(0, 120)}`.trim());
+  }
+
+  return response.blob();
+}
+
 function ModelConfigPanel({ T, configs, setConfigs, activeProvider, setActiveProvider, onClose }) {
   const [testingProvider, setTestingProvider] = useState(null);
   const [testResult, setTestResult] = useState(null);
@@ -487,174 +554,152 @@ function ModelConfigPanel({ T, configs, setConfigs, activeProvider, setActivePro
   };
 
   const handleTest = async (providerId) => {
-    const config = configs[providerId];
-    if (!config?.apiKey) {
-      setTestResult({ provider: providerId, success: false, message: '请先输入 API Key' });
+    const config = normalizeProviderConfig(configs, providerId);
+    if (!config.apiKey) {
+      setTestResult({ provider: providerId, success: false, message: "请先输入 API Key" });
+      return;
+    }
+    if (!config.model) {
+      setTestResult({ provider: providerId, success: false, message: "请先选择模型" });
       return;
     }
     setTestingProvider(providerId);
     setTestResult(null);
     try {
-      await callModelAPI(providerId, config, [{ role: 'user', content: 'Hi' }], 'You are a helpful assistant.');
-      setTestResult({ provider: providerId, success: true, message: '连接成功！' });
-    } catch (e) {
-      setTestResult({ provider: providerId, success: false, message: e.message });
+      await callModelAPI(providerId, config, [{ role: "user", content: "Hi" }], "You are a helpful assistant.");
+      setTestResult({ provider: providerId, success: true, message: "连接成功！" });
+    } catch (error) {
+      setTestResult({ provider: providerId, success: false, message: error.message });
+    } finally {
+      setTestingProvider(null);
     }
-    setTestingProvider(null);
   };
 
   const updateConfig = (providerId, field, value) => {
     setConfigs(prev => ({
       ...prev,
       [providerId]: {
-        ...prev[providerId],
+        ...normalizeProviderConfig(prev, providerId),
         [field]: value,
-        ...(field === 'provider' ? {} : {}),
       },
     }));
   };
 
-  const togglePasswordVisibility = (providerId) => {
-    setShowPassword(prev => ({ ...prev, [providerId]: !prev[providerId] }));
-  };
-
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
-      <div style={{
-        background: T.card, border: `1px solid ${T.border}`, borderRadius: 16,
-        width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column',
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: `1px solid ${T.border}`,
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, width: "100%", maxWidth: 580, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 8 }}>
             <Settings size={18} color={T.accent} /> 模型配置
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer', fontSize: 20 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 20 }}>×</button>
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
-          {/* Active Provider Selector */}
+        <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'monospace', marginBottom: 8 }}>
-              当前使用
-            </div>
+            <div style={{ fontSize: 11, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "monospace", marginBottom: 8 }}>当前使用</div>
             <select
               value={activeProvider}
               onChange={e => setActiveProvider(e.target.value)}
-              style={{
-                width: '100%', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10,
-                padding: '10px 14px', color: T.text, fontSize: 14, fontFamily: 'inherit',
-              }}
+              style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14, fontFamily: "inherit" }}
             >
-              {Object.values(MODEL_PROVIDERS).map(p => (
-                <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+              {Object.entries(MODEL_PROVIDERS).map(([providerId, provider]) => (
+                <option key={providerId} value={providerId}>{provider.icon} {provider.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Provider Configs */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {Object.values(MODEL_PROVIDERS).map(provider => {
-              const config = configs[provider.id] || {};
-              const isActive = activeProvider === provider.id;
-              const isTesting = testingProvider === provider.id;
-              const result = testResult?.provider === provider.id ? testResult : null;
-
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {Object.entries(MODEL_PROVIDERS).map(([providerId, provider]) => {
+              const config = normalizeProviderConfig(configs, providerId);
+              const isActive = activeProvider === providerId;
+              const isTesting = testingProvider === providerId;
+              const result = testResult?.provider === providerId ? testResult : null;
               return (
-                <div key={provider.id} style={{
-                  background: isActive ? T.accentGlow : T.surface,
-                  border: `1px solid ${isActive ? provider.color : T.border}`,
-                  borderRadius: 12, padding: 16,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div key={providerId} style={{ background: isActive ? T.accentGlow : T.surface, border: `1px solid ${isActive ? provider.color : T.border}`, borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                     <span style={{ fontSize: 18 }}>{provider.icon}</span>
                     <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{provider.name}</span>
-                    {isActive && <span style={{ fontSize: 10, background: provider.color, color: '#fff', padding: '2px 6px', borderRadius: 8 }}>使用中</span>}
+                    {isActive && <span style={{ fontSize: 10, background: provider.color, color: "#fff", padding: "2px 6px", borderRadius: 8 }}>使用中</span>}
                   </div>
 
-                  {/* API Key */}
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>API Key</div>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: "flex", gap: 6 }}>
                       <input
-                        type={showPassword[provider.id] ? 'text' : 'password'}
-                        value={config.apiKey || ''}
-                        onChange={e => updateConfig(provider.id, 'apiKey', e.target.value)}
+                        type={showPassword[providerId] ? "text" : "password"}
+                        value={config.apiKey}
+                        onChange={e => updateConfig(providerId, "apiKey", e.target.value)}
                         placeholder="输入 API Key"
-                        style={{
-                          flex: 1, background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8,
-                          padding: '8px 10px', color: T.text, fontSize: 13, fontFamily: 'inherit',
-                        }}
+                        style={{ flex: 1, background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, fontFamily: "inherit" }}
                       />
-                      <button
-                        onClick={() => togglePasswordVisibility(provider.id)}
-                        style={{
-                          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
-                          padding: '6px 10px', color: T.textMuted, cursor: 'pointer',
-                        }}
-                      >
-                        {showPassword[provider.id] ? '🙈' : '👁'}
+                      <button onClick={() => setShowPassword(prev => ({ ...prev, [providerId]: !prev[providerId] }))} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 10px", color: T.textMuted, cursor: "pointer" }}>
+                        {showPassword[providerId] ? "🙈" : "👁"}
                       </button>
                     </div>
                   </div>
 
-                  {/* URL (Read-only) */}
+                  {provider.extraFields?.map(field => (
+                    <div key={field.id} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>{field.label}</div>
+                      <input
+                        value={config[field.id] || ""}
+                        onChange={e => updateConfig(providerId, field.id, e.target.value)}
+                        placeholder={field.placeholder}
+                        style={{ width: "100%", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, fontFamily: "inherit" }}
+                      />
+                    </div>
+                  ))}
+
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>API URL</div>
-                    <div style={{
-                      width: '100%', background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8,
-                      padding: '8px 10px', color: T.accent, fontSize: 13, fontFamily: 'monospace',
-                    }}>
+                    <div style={{ width: "100%", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.accent, fontSize: 13, fontFamily: "monospace" }}>
                       {provider.defaultUrl}{provider.endpoint}
                     </div>
                   </div>
 
-                  {/* Model */}
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>模型</div>
                     <select
-                      value={config.model || ''}
-                      onChange={e => updateConfig(provider.id, 'model', e.target.value)}
-                      style={{
-                        width: '100%', background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8,
-                        padding: '8px 10px', color: T.text, fontSize: 13, fontFamily: 'inherit',
-                      }}
+                      value={config.model}
+                      onChange={e => updateConfig(providerId, "model", e.target.value)}
+                      style={{ width: "100%", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, fontFamily: "inherit" }}
                     >
-                      <option value="">选择模型...</option>
-                      {provider.models.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
+                      {provider.models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </div>
 
-                  {/* Test Button */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      onClick={() => handleTest(provider.id)}
-                      disabled={isTesting}
-                      style={{
-                        background: isTesting ? T.border : provider.color,
-                        border: 'none', borderRadius: 8, padding: '6px 14px',
-                        color: '#fff', fontSize: 12, cursor: isTesting ? 'not-allowed' : 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      {isTesting ? '测试中...' : '测试连接'}
+                  {provider.voiceModels?.input && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>语音识别模型</div>
+                      <select
+                        value={config.voiceInputModel}
+                        onChange={e => updateConfig(providerId, "voiceInputModel", e.target.value)}
+                        style={{ width: "100%", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, fontFamily: "inherit" }}
+                      >
+                        {provider.voiceModels.input.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {provider.voiceModels?.output && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>语音播报模型</div>
+                      <select
+                        value={config.voiceOutputModel}
+                        onChange={e => updateConfig(providerId, "voiceOutputModel", e.target.value)}
+                        style={{ width: "100%", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, fontFamily: "inherit" }}
+                      >
+                        {provider.voiceModels.output.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button onClick={() => handleTest(providerId)} disabled={isTesting} style={{ background: isTesting ? T.border : provider.color, border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 12, cursor: isTesting ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                      {isTesting ? "测试中..." : "测试连接"}
                     </button>
-                    {result && (
-                      <span style={{
-                        fontSize: 12, color: result.success ? '#4ade80' : '#f87171',
-                      }}>
-                        {result.success ? '✓ ' : '✗ '}{result.message}
-                      </span>
-                    )}
+                    {result && <span style={{ fontSize: 12, color: result.success ? "#4ade80" : "#f87171" }}>{result.success ? "✓ " : "✗ "}{result.message}</span>}
                   </div>
                 </div>
               );
@@ -662,92 +707,50 @@ function ModelConfigPanel({ T, configs, setConfigs, activeProvider, setActivePro
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{
-          display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 20px',
-          borderTop: `1px solid ${T.border}`,
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
-              padding: '8px 16px', color: T.text, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSave}
-            style={{
-              background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`,
-              border: 'none', borderRadius: 8, padding: '8px 20px',
-              color: T.userText, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            保存配置
-          </button>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "16px 20px", borderTop: `1px solid ${T.border}` }}>
+          <button onClick={onClose} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 16px", color: T.text, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>取消</button>
+          <button onClick={handleSave} style={{ background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`, border: "none", borderRadius: 8, padding: "8px 20px", color: T.userText, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>保存配置</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// USER CENTER PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
 function UserCenterPanel({ T, currentUser, users, onClose, onSwitchUser, onAddUser, onDeleteUser }) {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
-  const [selectedAvatar, setSelectedAvatar] = useState('🧑‍🎓');
-
-  const avatars = ['🧑‍🎓', '👨‍💻', '👩‍🏫', '🧙', '🦸', '👽', '🤖', '🎅', '🧛', '🧜', '👸', '🤴'];
+  const [newUsername, setNewUsername] = useState("");
+  const [selectedAvatar, setSelectedAvatar] = useState("🧑‍🎓");
+  const avatars = ["🧑‍🎓", "👨‍💻", "👩‍🏫", "🧙", "🦸", "👽", "🤖", "🎅", "🧛", "🧜", "👸", "🤴"];
 
   const handleAddUser = () => {
     if (!newUsername.trim()) return;
     onAddUser(newUsername.trim(), selectedAvatar);
-    setNewUsername('');
-    setSelectedAvatar('🧑‍🎓');
+    setNewUsername("");
+    setSelectedAvatar("🧑‍🎓");
     setShowAddForm(false);
   };
 
   const userProgressList = (userId) => loadUserProgressList(userId);
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
-      <div style={{
-        background: T.card, border: `1px solid ${T.border}`, borderRadius: 16,
-        width: '100%', maxWidth: 480, maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column',
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: `1px solid ${T.border}`,
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, width: "100%", maxWidth: 480, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 8 }}>
             <Users size={18} color={T.accent} /> 用户中心
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer', fontSize: 20 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 20 }}>×</button>
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
-          {/* User List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+        <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
             {users.map(user => {
               const progressList = userProgressList(user.id);
               const isCurrentUser = currentUser?.id === user.id;
-
               return (
-                <div key={user.id} style={{
-                  background: isCurrentUser ? T.accentGlow : T.surface,
-                  border: `1px solid ${isCurrentUser ? T.accent : T.border}`,
-                  borderRadius: 12, padding: 14,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div key={user.id} style={{ background: isCurrentUser ? T.accentGlow : T.surface, border: `1px solid ${isCurrentUser ? T.accent : T.border}`, borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ fontSize: 28 }}>{user.avatar}</div>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>
@@ -755,36 +758,13 @@ function UserCenterPanel({ T, currentUser, users, onClose, onSwitchUser, onAddUs
                           {isCurrentUser && <span style={{ fontSize: 11, color: T.accent, marginLeft: 6 }}>当前用户</span>}
                         </div>
                         <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
-                          {progressList.length > 0
-                            ? progressList.map(p => `${p.subject} ${p.mastery || 0}%`).join(' | ')
-                            : '暂无学习记录'
-                          }
+                          {progressList.length > 0 ? progressList.map(p => `${p.subject} ${p.mastery || 0}%`).join(" | ") : "暂无学习记录"}
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {!isCurrentUser && (
-                        <button
-                          onClick={() => { onSwitchUser(user.id); onClose(); }}
-                          style={{
-                            background: T.accent, border: 'none', borderRadius: 6,
-                            padding: '4px 10px', color: T.userText, fontSize: 11, cursor: 'pointer',
-                          }}
-                        >
-                          切换
-                        </button>
-                      )}
-                      {users.length > 1 && (
-                        <button
-                          onClick={() => onDeleteUser(user.id)}
-                          style={{
-                            background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 6,
-                            padding: '4px 8px', color: T.textMuted, fontSize: 11, cursor: 'pointer',
-                          }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {!isCurrentUser && <button onClick={() => { onSwitchUser(user.id); onClose(); }} style={{ background: T.accent, border: "none", borderRadius: 6, padding: "4px 10px", color: T.userText, fontSize: 11, cursor: "pointer" }}>切换</button>}
+                      {users.length > 1 && <button onClick={() => onDeleteUser(user.id)} style={{ background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "4px 8px", color: T.textMuted, fontSize: 11, cursor: "pointer" }}><Trash2 size={12} /></button>}
                     </div>
                   </div>
                 </div>
@@ -792,73 +772,27 @@ function UserCenterPanel({ T, currentUser, users, onClose, onSwitchUser, onAddUs
             })}
           </div>
 
-          {/* Add User Form */}
           {showAddForm ? (
-            <div style={{
-              background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16,
-            }}>
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>添加新用户</div>
               <div style={{ marginBottom: 12 }}>
-                <input
-                  value={newUsername}
-                  onChange={e => setNewUsername(e.target.value)}
-                  placeholder="输入用户名"
-                  style={{
-                    width: '100%', background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8,
-                    padding: '10px 12px', color: T.text, fontSize: 14, fontFamily: 'inherit',
-                  }}
-                />
+                <input value={newUsername} onChange={e => setNewUsername(e.target.value)} placeholder="输入用户名" style={{ width: "100%", background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px 12px", color: T.text, fontSize: 14, fontFamily: "inherit" }} />
               </div>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 6 }}>选择头像</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {avatars.map(av => (
-                    <button
-                      key={av}
-                      onClick={() => setSelectedAvatar(av)}
-                      style={{
-                        fontSize: 20, background: selectedAvatar === av ? T.accentGlow : 'transparent',
-                        border: `1px solid ${selectedAvatar === av ? T.accent : T.border}`,
-                        borderRadius: 8, padding: '4px 8px', cursor: 'pointer',
-                      }}
-                    >
-                      {av}
-                    </button>
+                    <button key={av} onClick={() => setSelectedAvatar(av)} style={{ fontSize: 20, background: selectedAvatar === av ? T.accentGlow : "transparent", border: `1px solid ${selectedAvatar === av ? T.accent : T.border}`, borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}>{av}</button>
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={handleAddUser}
-                  disabled={!newUsername.trim()}
-                  style={{
-                    flex: 1, background: newUsername.trim() ? T.accent : T.border,
-                    border: 'none', borderRadius: 8, padding: '8px',
-                    color: T.userText, fontSize: 13, cursor: newUsername.trim() ? 'pointer' : 'not-allowed',
-                  }}
-                >
-                  确定添加
-                </button>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  style={{
-                    background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
-                    padding: '8px 12px', color: T.text, fontSize: 13, cursor: 'pointer',
-                  }}
-                >
-                  取消
-                </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleAddUser} disabled={!newUsername.trim()} style={{ flex: 1, background: newUsername.trim() ? T.accent : T.border, border: "none", borderRadius: 8, padding: "8px", color: T.userText, fontSize: 13, cursor: newUsername.trim() ? "pointer" : "not-allowed" }}>确定添加</button>
+                <button onClick={() => setShowAddForm(false)} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 12px", color: T.text, fontSize: 13, cursor: "pointer" }}>取消</button>
               </div>
             </div>
           ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              style={{
-                width: '100%', background: 'transparent', border: `1px dashed ${T.border}`,
-                borderRadius: 12, padding: '12px', color: T.textMuted, fontSize: 13,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}
-            >
+            <button onClick={() => setShowAddForm(true)} style={{ width: "100%", background: "transparent", border: `1px dashed ${T.border}`, borderRadius: 12, padding: "12px", color: T.textMuted, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <Plus size={16} /> 添加新用户
             </button>
           )}
@@ -868,127 +802,64 @@ function UserCenterPanel({ T, currentUser, users, onClose, onSwitchUser, onAddUs
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VOICE SETTINGS PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose }) {
+function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose, voiceCapability, activeProvider }) {
   const [voices, setVoices] = useState([]);
-  const [showVoices, setShowVoices] = useState(false);
 
   useEffect(() => {
-    const loadVoices = () => {
-      const v = window.speechSynthesis?.getVoices() || [];
-      setVoices(v);
-    };
+    const loadVoices = () => setVoices(window.speechSynthesis?.getVoices() || []);
     loadVoices();
-    window.speechSynthesis?.addEventListener('voiceschanged', loadVoices);
-    return () => window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices);
+    window.speechSynthesis?.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis?.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
   const voiceModes = [
-    { id: 'realtime', label: '实时对话', desc: '全程语音交互' },
-    { id: 'push-to-talk', label: '按键说话', desc: '按住录音，松开发送' },
-    { id: 'text', label: '文字输入', desc: '纯文字模式' },
-  ];
-
-  const speedOptions = [
-    { value: 0.6, label: '0.6x (很慢)' },
-    { value: 0.8, label: '0.8x (慢速)' },
-    { value: 1.0, label: '1.0x (正常)' },
-    { value: 1.2, label: '1.2x (快速)' },
-    { value: 1.5, label: '1.5x (很快)' },
+    { id: "push-to-talk", label: "按键说话", desc: "点击录音，识别后自动发送" },
+    { id: "text", label: "文字输入", desc: "纯文字模式" },
   ];
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
-      <div style={{
-        background: T.card, border: `1px solid ${T.border}`, borderRadius: 16,
-        width: '100%', maxWidth: 420, overflow: 'hidden',
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: `1px solid ${T.border}`,
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: 'flex', alignItems: 'center', gap: 8 }}>
-            🔊 语音设置
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer', fontSize: 20 }}>×</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, width: "100%", maxWidth: 420, overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", gap: 8 }}>🔊 语音设置</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 20 }}>×</button>
         </div>
 
-        {/* Content */}
-        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Enable Voice */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 12, fontSize: 12, color: T.textDim, lineHeight: 1.7 }}>
+            当前模型：{MODEL_PROVIDERS[activeProvider]?.name || "未选择"}
+            <br />语音输入：{voiceCapability.input ? "已启用" : "不可用"}
+            <br />语音播报：{voiceCapability.output ? "已启用" : "降级为系统朗读"}
+            {voiceCapability.reason && <><br />{voiceCapability.reason}</>}
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>启用语音</div>
-              <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>开启后支持语音交互</div>
+              <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>开启后支持录音识别与老师朗读</div>
             </div>
-            <button
-              onClick={() => onUpdate({ enabled: !voiceSettings.enabled })}
-              style={{
-                width: 48, height: 26, borderRadius: 13, border: 'none',
-                background: voiceSettings.enabled ? T.accent : T.border,
-                position: 'relative', cursor: 'pointer',
-              }}
-            >
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%', background: '#fff',
-                position: 'absolute', top: 2,
-                left: voiceSettings.enabled ? 24 : 2,
-                transition: 'left 0.2s',
-              }} />
+            <button onClick={() => onUpdate({ enabled: !voiceSettings.enabled })} style={{ width: 48, height: 26, borderRadius: 13, border: "none", background: voiceSettings.enabled ? T.accent : T.border, position: "relative", cursor: "pointer" }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: voiceSettings.enabled ? 24 : 2, transition: "left 0.2s" }} />
             </button>
           </div>
 
-          {/* Auto Speak */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>自动朗读</div>
               <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>老师回复时自动播放语音</div>
             </div>
-            <button
-              onClick={() => onUpdate({ autoSpeak: !voiceSettings.autoSpeak })}
-              style={{
-                width: 48, height: 26, borderRadius: 13, border: 'none',
-                background: voiceSettings.autoSpeak ? T.accent : T.border,
-                position: 'relative', cursor: 'pointer',
-              }}
-            >
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%', background: '#fff',
-                position: 'absolute', top: 2,
-                left: voiceSettings.autoSpeak ? 24 : 2,
-                transition: 'left 0.2s',
-              }} />
+            <button onClick={() => onUpdate({ autoSpeak: !voiceSettings.autoSpeak })} style={{ width: 48, height: 26, borderRadius: 13, border: "none", background: voiceSettings.autoSpeak ? T.accent : T.border, position: "relative", cursor: "pointer" }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: voiceSettings.autoSpeak ? 24 : 2, transition: "left 0.2s" }} />
             </button>
           </div>
 
-          {/* Voice Mode */}
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>语音模式</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {voiceModes.map(mode => (
-                <button
-                  key={mode.id}
-                  onClick={() => onUpdate({ voiceMode: mode.id })}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    background: voiceSettings.voiceMode === mode.id ? T.accentGlow : 'transparent',
-                    border: `1px solid ${voiceSettings.voiceMode === mode.id ? T.accent : T.border}`,
-                    borderRadius: 10, padding: '10px 12px', cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
-                  <div style={{
-                    width: 16, height: 16, borderRadius: '50%', border: `2px solid ${voiceSettings.voiceMode === mode.id ? T.accent : T.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {voiceSettings.voiceMode === mode.id && (
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.accent }} />
-                    )}
+                <button key={mode.id} onClick={() => onUpdate({ voiceMode: mode.id })} style={{ display: "flex", alignItems: "center", gap: 10, background: voiceSettings.voiceMode === mode.id ? T.accentGlow : "transparent", border: `1px solid ${voiceSettings.voiceMode === mode.id ? T.accent : T.border}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}>
+                  <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${voiceSettings.voiceMode === mode.id ? T.accent : T.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {voiceSettings.voiceMode === mode.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.accent }} />}
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>{mode.label}</div>
@@ -999,121 +870,51 @@ function VoiceSettingsPanel({ T, voiceSettings, onUpdate, onClose }) {
             </div>
           </div>
 
-          {/* Speed */}
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>
-              语速: {voiceSettings.speed || 1.0}x
-            </div>
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={voiceSettings.speed || 1.0}
-              onChange={e => onUpdate({ speed: parseFloat(e.target.value) })}
-              style={{
-                width: '100%', accentColor: T.accent,
-              }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.textMuted, marginTop: 4 }}>
-              <span>慢</span><span>正常</span><span>快</span>
-            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>语速: {voiceSettings.speed || 1.0}x</div>
+            <input type="range" min="0.5" max="2" step="0.1" value={voiceSettings.speed || 1.0} onChange={e => onUpdate({ speed: parseFloat(e.target.value) })} style={{ width: "100%", accentColor: T.accent }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.textMuted, marginTop: 4 }}><span>慢</span><span>正常</span><span>快</span></div>
           </div>
 
-          {/* Voice Selection */}
           {voices.length > 0 && (
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>语音包</div>
-              <select
-                value={voiceSettings.voiceId || ''}
-                onChange={e => onUpdate({ voiceId: e.target.value })}
-                style={{
-                  width: '100%', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
-                  padding: '8px 10px', color: T.text, fontSize: 13, fontFamily: 'inherit',
-                }}
-              >
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>系统语音包</div>
+              <select value={voiceSettings.voiceId || ""} onChange={e => onUpdate({ voiceId: e.target.value })} style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", color: T.text, fontSize: 13, fontFamily: "inherit" }}>
                 <option value="">默认语音</option>
-                {voices.map((v, i) => (
-                  <option key={i} value={v.voiceURI || v.name}>
-                    {v.name} ({v.lang})
-                  </option>
-                ))}
+                {voices.map((v, i) => <option key={i} value={v.voiceURI || v.name}>{v.name} ({v.lang})</option>)}
               </select>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: '12px 20px', borderTop: `1px solid ${T.border}` }}>
-          <button
-            onClick={onClose}
-            style={{
-              width: '100%', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
-              padding: '10px', color: T.text, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            完成
-          </button>
+        <div style={{ padding: "12px 20px", borderTop: `1px solid ${T.border}` }}>
+          <button onClick={onClose} style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px", color: T.text, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>完成</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// RECOVERY DIALOG
-// ═══════════════════════════════════════════════════════════════════════════════
 function RecoveryDialog({ T, progress, onResume, onNewSession }) {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
-      <div style={{
-        background: T.card, border: `1px solid ${T.border}`, borderRadius: 16,
-        width: '100%', maxWidth: 380, padding: 24,
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, width: "100%", maxWidth: 380, padding: 24 }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 8 }}>
-            检测到未完成的学习
-          </div>
-          <div style={{ fontSize: 13, color: T.textDim }}>
-            {progress.subject} · 掌握率 {progress.mastery || 0}%
-          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 8 }}>检测到未完成的学习</div>
+          <div style={{ fontSize: 13, color: T.textDim }}>{progress.subject} · 掌握率 {progress.mastery || 0}%</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button
-            onClick={onResume}
-            style={{
-              background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`,
-              border: 'none', borderRadius: 10, padding: '12px',
-              color: T.userText, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            继续学习
-          </button>
-          <button
-            onClick={onNewSession}
-            style={{
-              background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10,
-              padding: '12px', color: T.text, fontSize: 14, cursor: 'pointer',
-            }}
-          >
-            开始新课程
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button onClick={onResume} style={{ background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`, border: "none", borderRadius: 10, padding: "12px", color: T.userText, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>继续学习</button>
+          <button onClick={onNewSession} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px", color: T.text, fontSize: 14, cursor: "pointer" }}>开始新课程</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// WORD PRONUNCIATION COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
 function PronunciationText({ text, lang, voiceEnabled, voiceSettings }) {
   const synthRef = useRef(null);
-
   useEffect(() => {
     synthRef.current = window.speechSynthesis;
   }, []);
@@ -1132,71 +933,23 @@ function PronunciationText({ text, lang, voiceEnabled, voiceSettings }) {
     synthRef.current.speak(utter);
   };
 
-  // Split text and make words clickable
-  const parts = text.split(/(\s+)/).map((part, i) => {
-    if (/\s+/.test(part)) return <span key={i}>{part}</span>;
-    // Check if it looks like a word (letters)
-    if (/[\w']+/.test(part)) {
-      return (
-        <span
-          key={i}
-          onClick={() => speakWord(part)}
-          style={{ cursor: voiceEnabled ? 'pointer' : 'default' }}
-          title={voiceEnabled ? `点击发音: ${part}` : part}
-        >
-          {part}
-        </span>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-
-  return <>{parts}</>;
+  return <>{text.split(/(\s+)/).map((part, i) => /\s+/.test(part) ? <span key={i}>{part}</span> : (/['\w]+/.test(part) ? <span key={i} onClick={() => speakWord(part)} style={{ cursor: voiceEnabled ? "pointer" : "default" }}>{part}</span> : <span key={i}>{part}</span>))}</>;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN APP
-// ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
-  const [themeId, setThemeId] = useState(() => {
-    const settings = loadGlobalSettings();
-    return settings.themeId || 'amber';
-  });
+  const [themeId, setThemeId] = useState(() => loadGlobalSettings().themeId || "amber");
   const T = THEMES[themeId];
 
-  // User state
   const [users, setUsers] = useState(loadUsers);
   const [currentUser, setCurrentUser] = useState(() => {
     const userId = loadCurrentUserId();
     const allUsers = loadUsers();
     return allUsers.find(u => u.id === userId) || allUsers[0] || null;
   });
-
-  // Model config state
   const [modelConfigs, setModelConfigs] = useState(loadModelConfigs);
   const [activeProvider, setActiveProvider] = useState(loadActiveProvider);
-
-  // Voice settings
-  const [voiceSettings, setVoiceSettings] = useState(() => {
-    const settings = loadGlobalSettings();
-    return settings.voiceSettings || {
-      enabled: true,
-      autoSpeak: false,
-      speed: 1.0,
-      voiceMode: 'push-to-talk',
-      voiceId: '',
-    };
-  });
-
-  // App phase
-  const [phase, setPhase] = useState(() => {
-    // Check if user exists, if not go to welcome
-    const allUsers = loadUsers();
-    if (allUsers.length === 0) return 'welcome';
-    return 'onboard';
-  });
-
-  // Learning state
+  const [voiceSettings, setVoiceSettings] = useState(() => loadGlobalSettings().voiceSettings || { enabled: true, autoSpeak: false, speed: 1.0, voiceMode: "push-to-talk", voiceId: "" });
+  const [phase, setPhase] = useState(() => loadUsers().length === 0 ? "welcome" : "onboard");
   const [subject, setSubject] = useState("");
   const [level, setLevel] = useState("初学者");
   const [goal, setGoal] = useState("");
@@ -1206,13 +959,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [apiHistory, setApiHistory] = useState([]);
   const [teacher, setTeacher] = useState(DEFAULT_TEACHER);
-
-  // Voice states
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-
-  // UI states
+  const [voiceCapability, setVoiceCapability] = useState({ input: false, output: false, reason: "" });
+  const [voiceError, setVoiceError] = useState("");
   const [showThemes, setShowThemes] = useState(false);
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [showUserCenter, setShowUserCenter] = useState(false);
@@ -1223,63 +973,46 @@ export default function App() {
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
   const systemRef = useRef("");
-  const recognitionRef = useRef(null);
   const synthRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioPlayerRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
 
-  // Check voice support
   useEffect(() => {
-    const hasSpeech = "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
-    const hasSynth = "speechSynthesis" in window;
-    setVoiceSupported(hasSpeech && hasSynth);
-    if (hasSynth) synthRef.current = window.speechSynthesis;
-  }, []);
+    const canRecord = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+    const canSpeak = !!window.speechSynthesis;
+    const supportsSiliconVoice = !!modelConfigs.siliconflow?.apiKey;
+    setVoiceCapability({
+      input: canRecord && supportsSiliconVoice,
+      output: canSpeak || supportsSiliconVoice,
+      reason: !supportsSiliconVoice ? "请先配置硅基流动 API Key 以启用手机语音识别。" : "",
+    });
+    if (canSpeak) synthRef.current = window.speechSynthesis;
+  }, [modelConfigs.siliconflow?.apiKey]);
 
-  // Auto-save progress
   useEffect(() => {
-    if (phase === 'chat' && currentUser && subject) {
+    if (phase === "chat" && currentUser && subject) {
       autoSaveTimerRef.current = setInterval(() => {
-        saveProgress(currentUser.id, subject, {
-          subject,
-          level,
-          goal,
-          mastery,
-          messages,
-          apiHistory,
-          sessionStats,
-          teacher,
-        });
-      }, 30000); // Save every 30 seconds
+        saveProgress(currentUser.id, subject, { subject, level, goal, mastery, messages, apiHistory, sessionStats, teacher });
+      }, 30000);
     }
-    return () => {
-      if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
-    };
+    return () => autoSaveTimerRef.current && clearInterval(autoSaveTimerRef.current);
   }, [phase, currentUser, subject, mastery, messages, apiHistory, sessionStats, teacher, level, goal]);
 
-  // Save on page unload
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (phase === 'chat' && currentUser && subject) {
-        saveProgress(currentUser.id, subject, {
-          subject,
-          level,
-          goal,
-          mastery,
-          messages,
-          apiHistory,
-          sessionStats,
-          teacher,
-        });
+      if (phase === "chat" && currentUser && subject) {
+        saveProgress(currentUser.id, subject, { subject, level, goal, mastery, messages, apiHistory, sessionStats, teacher });
       }
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [phase, currentUser, subject, mastery, messages, apiHistory, sessionStats, teacher, level, goal]);
 
-  // Scroll to bottom
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+  useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages, loading]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "46px";
@@ -1287,68 +1020,124 @@ export default function App() {
     }
   }, [input]);
 
-  // Check for recovery progress
   useEffect(() => {
-    if (phase === 'onboard' && currentUser) {
+    if (phase === "onboard" && currentUser) {
       const progressList = loadUserProgressList(currentUser.id);
       if (progressList.length > 0) {
-        // Get most recent
-        const mostRecent = progressList.sort((a, b) =>
-          new Date(b.lastUpdated) - new Date(a.lastUpdated)
-        )[0];
-        setRecoveryProgress(mostRecent);
+        setRecoveryProgress(progressList.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated))[0]);
       }
     }
   }, [phase, currentUser]);
 
-  // ── Voice input ──────────────────────────────────────────────────────────
-  const startRecording = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.lang = teacher.lang || "zh-CN";
-    rec.continuous = voiceSettings.voiceMode === 'realtime';
-    rec.interimResults = true;
-    rec.onresult = (e) => {
-      const transcript = Array.from(e.results).map(r => r[0].transcript).join("");
-      setInput(transcript);
-    };
-    rec.onend = () => setIsRecording(false);
-    rec.onerror = () => setIsRecording(false);
-    recognitionRef.current = rec;
-    rec.start();
-    setIsRecording(true);
+  const startRecording = async () => {
+    if (!voiceSettings.enabled || voiceSettings.voiceMode === "text") return;
+    if (!voiceCapability.input) {
+      setVoiceError(voiceCapability.reason || "当前设备不支持语音输入");
+      return;
+    }
+    try {
+      setVoiceError("");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (event) => event.data?.size && audioChunksRef.current.push(event.data);
+      recorder.onerror = () => {
+        setIsRecording(false);
+        setVoiceError("录音失败，请检查麦克风权限");
+      };
+      recorder.onstop = async () => {
+        setIsRecording(false);
+        mediaStreamRef.current?.getTracks?.().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        audioChunksRef.current = [];
+        if (!audioBlob.size) return;
+        try {
+          const transcript = await transcribeAudio(modelConfigs.siliconflow, audioBlob, teacher.lang === "en-US" ? "en" : "zh");
+          if (!transcript) throw new Error("未识别到语音内容");
+          setInput(transcript.trim());
+          if (voiceSettings.voiceMode === "push-to-talk") {
+            setTimeout(() => handleSend(transcript.trim()), 0);
+          }
+        } catch (error) {
+          setVoiceError(error.message || "语音识别失败");
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      setVoiceError(error.message || "无法启动录音，请检查麦克风权限");
+      setIsRecording(false);
+    }
   };
 
   const stopRecording = () => {
-    recognitionRef.current?.stop();
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
     setIsRecording(false);
   };
 
-  // ── Voice output (TTS) ───────────────────────────────────────────────────
-  const speakText = useCallback((text) => {
-    if (!synthRef.current || !voiceSettings.enabled) return;
-    synthRef.current.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = teacher.lang || "zh-CN";
-    utter.rate = voiceSettings.speed || 1.0;
-    if (voiceSettings.voiceId) {
-      const voices = synthRef.current.getVoices();
-      const match = voices.find(v => v.voiceURI === voiceSettings.voiceId || v.name === voiceSettings.voiceId);
-      if (match) utter.voice = match;
+  const speakText = useCallback(async (text) => {
+    if (!voiceSettings.enabled || !text) return;
+    try {
+      setVoiceError("");
+      if (modelConfigs.siliconflow?.apiKey) {
+        setIsSpeaking(true);
+        const blob = await synthesizeSpeech(modelConfigs.siliconflow, text);
+        const objectUrl = URL.createObjectURL(blob);
+        audioPlayerRef.current?.pause();
+        const audio = new Audio(objectUrl);
+        audioPlayerRef.current = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(objectUrl);
+          setIsSpeaking(false);
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          setIsSpeaking(false);
+          setVoiceError("语音播报失败，已自动回退系统朗读");
+          if (synthRef.current) {
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = teacher.lang || "zh-CN";
+            utter.rate = voiceSettings.speed || 1.0;
+            synthRef.current.speak(utter);
+          }
+        };
+        await audio.play();
+        return;
+      }
+      if (!synthRef.current) return;
+      synthRef.current.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = teacher.lang || "zh-CN";
+      utter.rate = voiceSettings.speed || 1.0;
+      if (voiceSettings.voiceId) {
+        const voices = synthRef.current.getVoices();
+        const match = voices.find(v => v.voiceURI === voiceSettings.voiceId || v.name === voiceSettings.voiceId);
+        if (match) utter.voice = match;
+      }
+      utter.onstart = () => setIsSpeaking(true);
+      utter.onend = () => setIsSpeaking(false);
+      utter.onerror = () => {
+        setIsSpeaking(false);
+        setVoiceError("系统朗读失败");
+      };
+      synthRef.current.speak(utter);
+    } catch (error) {
+      setIsSpeaking(false);
+      setVoiceError(error.message || "语音播报失败");
     }
-    utter.onstart = () => setIsSpeaking(true);
-    utter.onend = () => setIsSpeaking(false);
-    utter.onerror = () => setIsSpeaking(false);
-    synthRef.current.speak(utter);
-  }, [voiceSettings, teacher.lang]);
+  }, [voiceSettings, teacher.lang, modelConfigs.siliconflow]);
 
   const stopSpeaking = () => {
     synthRef.current?.cancel();
+    audioPlayerRef.current?.pause();
+    if (audioPlayerRef.current) audioPlayerRef.current.currentTime = 0;
     setIsSpeaking(false);
   };
 
-  // ── Parse AI response ────────────────────────────────────────────────────
   const parseResponse = (text) => {
     try {
       const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
@@ -1361,67 +1150,35 @@ export default function App() {
     }
   };
 
-  // ── Call tutor API ───────────────────────────────────────────────────────
   const callTutor = useCallback(async (userMsg, history) => {
     setLoading(true);
     try {
-      const config = modelConfigs[activeProvider] || {};
+      const config = normalizeProviderConfig(modelConfigs, activeProvider);
       if (!config.apiKey || !config.model) {
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: "请先在设置中配置 API Key 和选择模型",
-          mode: "explain",
-          insight: "",
-          suggestedResponses: ["打开设置", "配置模型"],
-        }]);
+        setMessages(prev => [...prev, { role: "assistant", content: "请先在设置中配置 API Key 和选择模型", mode: "explain", insight: "", suggestedResponses: ["打开设置", "配置模型"] }]);
         setLoading(false);
         return;
       }
-
       const msgs = [...history, { role: "user", content: userMsg }];
       const raw = await callModelAPI(activeProvider, config, msgs, systemRef.current);
       const parsed = parseResponse(raw);
       const newMastery = Math.max(0, Math.min(100, parsed.currentMastery ?? (mastery + (parsed.masteryDelta ?? 0))));
-
       const newHistory = [...msgs, { role: "assistant", content: raw }];
       setApiHistory(newHistory);
-
-      const aiMsg = {
-        role: "assistant",
-        content: parsed.message || "（解析失败，请重试）",
-        mode: parsed.mode || "explain",
-        insight: parsed.insight || "",
-        suggestedResponses: parsed.suggestedResponses || [],
-      };
+      const aiMsg = { role: "assistant", content: parsed.message || "（解析失败，请重试）", mode: parsed.mode || "explain", insight: parsed.insight || "", suggestedResponses: parsed.suggestedResponses || [] };
       setMessages(prev => [...prev, aiMsg]);
       setMastery(newMastery);
       setSessionStats(prev => ({ ...prev, turns: prev.turns + 1 }));
-
-      if (voiceSettings.autoSpeak && parsed.message) {
-        speakText(parsed.message.slice(0, 300));
-      }
-    } catch (e) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `出错了: ${e.message}`,
-        mode: "explain",
-        insight: "",
-        suggestedResponses: ["重试", "检查API配置"],
-      }]);
+      if (voiceSettings.autoSpeak && parsed.message) speakText(parsed.message.slice(0, 300));
+    } catch (error) {
+      setMessages(prev => [...prev, { role: "assistant", content: `出错了: ${error.message}`, mode: "explain", insight: "", suggestedResponses: ["重试", "检查API配置"] }]);
     } finally {
       setLoading(false);
     }
-  }, [modelConfigs, activeProvider, mastery, voiceSettings.autoSpeak, teacher.lang, speakText]);
+  }, [modelConfigs, activeProvider, mastery, voiceSettings.autoSpeak, speakText]);
 
-  // ── User Management ─────────────────────────────────────────────────────
   const handleAddUser = (username, avatar) => {
-    const newUser = {
-      id: generateId(),
-      username,
-      avatar,
-      createdAt: new Date().toISOString(),
-      settings: { theme: themeId },
-    };
+    const newUser = { id: generateId(), username, avatar, createdAt: new Date().toISOString(), settings: { theme: themeId } };
     const updated = [...users, newUser];
     setUsers(updated);
     saveUsers(updated);
@@ -1434,9 +1191,8 @@ export default function App() {
     if (user) {
       setCurrentUser(user);
       saveCurrentUserId(userId);
-      // Reset to onboard to let them choose subject
-      setPhase('onboard');
-      setSubject('');
+      setPhase("onboard");
+      setSubject("");
       setMessages([]);
       setApiHistory([]);
       setMastery(0);
@@ -1454,7 +1210,6 @@ export default function App() {
     }
   };
 
-  // ── Handle Start ────────────────────────────────────────────────────────
   const handleStart = async () => {
     if (!subject.trim()) return;
     const t = getTeacher(subject);
@@ -1468,7 +1223,6 @@ export default function App() {
     await callTutor(`你好，我想学「${subject.trim()}」，请开始吧。`, []);
   };
 
-  // ── Handle Send ─────────────────────────────────────────────────────────
   const handleSend = async (text) => {
     const msg = (text || input).trim();
     if (!msg || loading) return;
@@ -1478,488 +1232,177 @@ export default function App() {
     await callTutor(msg, apiHistory);
   };
 
-  // ── Resume Progress ─────────────────────────────────────────────────────
   const handleResumeProgress = () => {
-    if (recoveryProgress) {
-      setSubject(recoveryProgress.subject);
-      setLevel(recoveryProgress.level || "初学者");
-      setGoal(recoveryProgress.goal || "");
-      setMastery(recoveryProgress.mastery || 0);
-      setMessages(recoveryProgress.messages || []);
-      setApiHistory(recoveryProgress.apiHistory || []);
-      setSessionStats(recoveryProgress.sessionStats || { turns: 0, startTime: Date.now() });
-      const t = getTeacher(recoveryProgress.subject);
-      setTeacher(t);
-      systemRef.current = buildSystem(recoveryProgress.subject, recoveryProgress.level || "初学者", recoveryProgress.goal || "", t);
-      setPhase("chat");
-      setRecoveryProgress(null);
-    }
+    if (!recoveryProgress) return;
+    setSubject(recoveryProgress.subject);
+    setLevel(recoveryProgress.level || "初学者");
+    setGoal(recoveryProgress.goal || "");
+    setMastery(recoveryProgress.mastery || 0);
+    setMessages(recoveryProgress.messages || []);
+    setApiHistory(recoveryProgress.apiHistory || []);
+    setSessionStats(recoveryProgress.sessionStats || { turns: 0, startTime: Date.now() });
+    const t = getTeacher(recoveryProgress.subject);
+    setTeacher(t);
+    systemRef.current = buildSystem(recoveryProgress.subject, recoveryProgress.level || "初学者", recoveryProgress.goal || "", t);
+    setPhase("chat");
+    setRecoveryProgress(null);
   };
 
   const handleNewSession = () => {
     setRecoveryProgress(null);
-    setSubject('');
+    setSubject("");
     setMessages([]);
     setApiHistory([]);
     setMastery(0);
   };
 
-  // ── Update Voice Settings ───────────────────────────────────────────────
   const handleUpdateVoiceSettings = (updates) => {
     const newSettings = { ...voiceSettings, ...updates };
     setVoiceSettings(newSettings);
-    const settings = loadGlobalSettings();
-    saveGlobalSettings({ ...settings, voiceSettings: newSettings });
+    saveGlobalSettings({ ...loadGlobalSettings(), voiceSettings: newSettings, themeId });
   };
 
-  // ── Update Theme ─────────────────────────────────────────────────────────
   const handleChangeTheme = (newThemeId) => {
     setThemeId(newThemeId);
-    const settings = loadGlobalSettings();
-    saveGlobalSettings({ ...settings, themeId: newThemeId });
+    saveGlobalSettings({ ...loadGlobalSettings(), themeId: newThemeId, voiceSettings });
   };
 
-  // ── Mode label/color ──────────────────────────────────────────────────────
   const MODE_INFO = {
-    explore:   { label: "🔍 探索提问", color: "#60a5fa" },
-    explain:   { label: "📖 知识讲解", color: T.accent },
-    test:      { label: "✏️ 知识测验", color: "#a78bfa" },
-    praise:    { label: "🌟 答得好",   color: "#4ade80" },
-    redirect:  { label: "🔄 再想一想", color: "#f87171" },
-    milestone: { label: "🏆 里程碑",   color: "#fbbf24" },
+    explore: { label: "🔍 探索提问", color: "#60a5fa" },
+    explain: { label: "📖 知识讲解", color: T.accent },
+    test: { label: "✏️ 知识测验", color: "#a78bfa" },
+    praise: { label: "🌟 答得好", color: "#4ade80" },
+    redirect: { label: "🔄 再想一想", color: "#f87171" },
+    milestone: { label: "🏆 里程碑", color: "#fbbf24" },
   };
-
   const LEVELS = ["零基础", "初学者", "有些了解", "中级", "高级"];
   const PRESETS = ["Python编程", "英语口语", "高中数学", "经济学", "机器学习", "历史"];
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // WELCOME SCREEN (No Users)
-  // ═══════════════════════════════════════════════════════════════════════════
   if (phase === "welcome") return (
     <div style={{ minHeight: "100vh", background: T.bg, color: T.text, fontFamily: "'Georgia','Times New Roman',serif", overflowY: "auto" }}>
-      <style>{`
-        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-      `}</style>
+      <style>{`@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} } * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 24, animation: "fadeUp 0.5s ease" }}>
         <div style={{ fontSize: 64 }}>🎓</div>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 12 }}>
-            <span style={{ background: `linear-gradient(135deg, ${T.text}, ${T.accent})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>AI 一对一私教</span>
-          </div>
-          <div style={{ fontSize: 15, color: T.textDim, lineHeight: 1.6 }}>
-            欢迎使用 AI 私教系统<br />
-            打造你的专属学习伙伴
-          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 12 }}><span style={{ background: `linear-gradient(135deg, ${T.text}, ${T.accent})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>AI 一对一私教</span></div>
+          <div style={{ fontSize: 15, color: T.textDim, lineHeight: 1.6 }}>欢迎使用 AI 私教系统<br />打造你的专属学习伙伴</div>
         </div>
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
-          <button
-            onClick={() => {
-              const username = "学生" + Math.floor(Math.random() * 1000);
-              handleAddUser(username, '🧑‍🎓');
-              setPhase('onboard');
-            }}
-            style={{
-              width: '100%', background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`,
-              border: 'none', borderRadius: 12, padding: '14px',
-              color: T.userText, fontSize: 15, fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            快速开始（创建默认用户）
-          </button>
-          <button
-            onClick={() => setShowUserCenter(true)}
-            style={{
-              width: '100%', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12,
-              padding: '14px', color: T.text, fontSize: 15, cursor: 'pointer',
-            }}
-          >
-            创建自定义用户
-          </button>
-        </div>
-        <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: T.textMuted }}>首次使用将自动创建默认用户</div>
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12, marginTop: 20 }}>
+          <button onClick={() => { const username = "学生" + Math.floor(Math.random() * 1000); handleAddUser(username, "🧑‍🎓"); setPhase("onboard"); }} style={{ width: "100%", background: `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`, border: "none", borderRadius: 12, padding: "14px", color: T.userText, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>快速开始（创建默认用户）</button>
+          <button onClick={() => setShowUserCenter(true)} style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px", color: T.text, fontSize: 15, cursor: "pointer" }}>创建自定义用户</button>
         </div>
       </div>
-      {showUserCenter && (
-        <UserCenterPanel
-          T={T}
-          currentUser={null}
-          users={[]}
-          onClose={() => setShowUserCenter(false)}
-          onSwitchUser={handleSwitchUser}
-          onAddUser={(name, av) => {
-            handleAddUser(name, av);
-            setShowUserCenter(false);
-            setPhase('onboard');
-          }}
-          onDeleteUser={handleDeleteUser}
-        />
-      )}
+      {showUserCenter && <UserCenterPanel T={T} currentUser={null} users={[]} onClose={() => setShowUserCenter(false)} onSwitchUser={handleSwitchUser} onAddUser={(name, av) => { handleAddUser(name, av); setShowUserCenter(false); setPhase("onboard"); }} onDeleteUser={handleDeleteUser} />}
     </div>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ONBOARDING SCREEN
-  // ═══════════════════════════════════════════════════════════════════════════
   if (phase === "onboard") return (
     <div style={{ minHeight: "100vh", background: T.bg, color: T.text, fontFamily: "'Georgia','Times New Roman',serif", overflowY: "auto", position: "relative" }}>
-      <style>{`
-        @keyframes dotBounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 2px; }
-        input, button { outline: none; }
-      `}</style>
-
-      {/* Recovery Dialog */}
-      {recoveryProgress && (
-        <RecoveryDialog
-          T={T}
-          progress={recoveryProgress}
-          onResume={handleResumeProgress}
-          onNewSession={handleNewSession}
-        />
-      )}
-
-      {/* Ambient */}
+      <style>{`@keyframes dotBounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} } @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} } @keyframes spin { to{transform:rotate(360deg)} } * { box-sizing: border-box; margin: 0; padding: 0; } ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 2px; } input, button { outline: none; }`}</style>
+      {recoveryProgress && <RecoveryDialog T={T} progress={recoveryProgress} onResume={handleResumeProgress} onNewSession={handleNewSession} />}
       <div style={{ position: "fixed", width: 500, height: 500, borderRadius: "50%", background: `radial-gradient(circle, ${T.orb1} 0%, transparent 70%)`, left: -150, top: -150, pointerEvents: "none" }} />
       <div style={{ position: "fixed", width: 400, height: 400, borderRadius: "50%", background: `radial-gradient(circle, ${T.orb2} 0%, transparent 70%)`, right: -100, bottom: 0, pointerEvents: "none" }} />
-
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", borderBottom: `1px solid ${T.border}`, background: T.headerBg, backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: T.accent, display: "flex", alignItems: "center", gap: 8 }}>
           <span>🕯</span> 私塾 · AI家教
-          {currentUser && (
-            <span style={{ fontSize: 12, color: T.textMuted, fontWeight: 400, marginLeft: 8 }}>
-              · {currentUser.avatar} {currentUser.username}
-            </span>
-          )}
+          {currentUser && <span style={{ fontSize: 12, color: T.textMuted, fontWeight: 400, marginLeft: 8 }}>· {currentUser.avatar} {currentUser.username}</span>}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: 'center' }}>
-          {/* User Button */}
-          <button
-            onClick={() => setShowUserCenter(true)}
-            style={{
-              background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8,
-              padding: "5px 10px", color: T.text, cursor: "pointer", fontSize: 14,
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
-          >
-            <Users size={14} /> {currentUser?.avatar || '👤'}
-          </button>
-          {/* Theme switcher */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => setShowUserCenter(true)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.text, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 4 }}><Users size={14} /> {currentUser?.avatar || "👤"}</button>
           <div style={{ position: "relative" }}>
-            <button className="iconbtn" onClick={() => setShowThemes(p => !p)}
-              style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.accent, cursor: "pointer", fontSize: 14 }}>
-              {THEMES[themeId].icon}
-            </button>
-            {showThemes && (
-              <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 8, display: "flex", flexDirection: "column", gap: 4, zIndex: 200, minWidth: 130 }}>
-                {Object.values(THEMES).map(th => (
-                  <button key={th.id} onClick={() => { handleChangeTheme(th.id); setShowThemes(false); }}
-                    style={{ background: themeId === th.id ? T.accentGlow : "transparent", border: "none", borderRadius: 8, padding: "6px 10px", color: themeId === th.id ? T.accent : T.textDim, cursor: "pointer", fontSize: 13, textAlign: "left", display: "flex", gap: 8, alignItems: "center", fontFamily: "inherit" }}>
-                    {th.icon} {th.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            <button onClick={() => setShowThemes(p => !p)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.accent, cursor: "pointer", fontSize: 14 }}>{THEMES[themeId].icon}</button>
+            {showThemes && <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 8, display: "flex", flexDirection: "column", gap: 4, zIndex: 200, minWidth: 130 }}>{Object.values(THEMES).map(th => <button key={th.id} onClick={() => { handleChangeTheme(th.id); setShowThemes(false); }} style={{ background: themeId === th.id ? T.accentGlow : "transparent", border: "none", borderRadius: 8, padding: "6px 10px", color: themeId === th.id ? T.accent : T.textDim, cursor: "pointer", fontSize: 13, textAlign: "left", display: "flex", gap: 8, alignItems: "center", fontFamily: "inherit" }}>{th.icon} {th.name}</button>)}</div>}
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "40px 20px", display: "flex", flexDirection: "column", gap: 32, animation: "fadeUp 0.5s ease" }}>
-        {/* Hero */}
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginBottom: 16 }}>
-            <span style={{ background: `linear-gradient(135deg, ${T.text}, ${T.accent})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>你的专属 AI 家教<br />已就位</span>
-          </div>
-          <div style={{ fontSize: 15, color: T.textDim, lineHeight: 1.75 }}>
-            不是搜索引擎，不是空白输入框<br />
-            而是一位懂你的导师，从漏洞到掌握，超越98%的同龄人
-          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginBottom: 16 }}><span style={{ background: `linear-gradient(135deg, ${T.text}, ${T.accent})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>你的专属 AI 家教<br />已就位</span></div>
+          <div style={{ fontSize: 15, color: T.textDim, lineHeight: 1.75 }}>不是搜索引擎，不是空白输入框<br />而是一位懂你的导师，从漏洞到掌握，超越98%的同龄人</div>
         </div>
 
-        {/* Input Card */}
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: 28, display: "flex", flexDirection: "column", gap: 20, boxShadow: `0 8px 32px rgba(0,0,0,0.2)` }}>
-          {/* Subject */}
+        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: 28, display: "flex", flexDirection: "column", gap: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
           <div>
             <div style={{ fontSize: 11, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "monospace", marginBottom: 8 }}>我想学什么</div>
-            <input
-              value={subject} onChange={e => setSubject(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleStart()}
-              placeholder="Python编程 / 英语口语 / 高中数学 / 自定义…"
-              style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14.5, fontFamily: "inherit", transition: "border-color 0.2s" }}
-              onFocus={e => e.target.style.borderColor = T.accent}
-              onBlur={e => e.target.style.borderColor = T.border}
-            />
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-              {PRESETS.map(s => (
-                <button key={s} onClick={() => setSubject(s)}
-                  style={{ background: subject === s ? T.accentGlow : "transparent", border: `1px solid ${subject === s ? T.accent : T.border}`, borderRadius: 14, padding: "4px 10px", color: subject === s ? T.accent : T.textMuted, fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
-                  {s}
-                </button>
-              ))}
-            </div>
+            <input value={subject} onChange={e => setSubject(e.target.value)} onKeyDown={e => e.key === "Enter" && handleStart()} placeholder="Python编程 / 英语口语 / 高中数学 / 自定义…" style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14.5, fontFamily: "inherit" }} />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>{PRESETS.map(s => <button key={s} onClick={() => setSubject(s)} style={{ background: subject === s ? T.accentGlow : "transparent", border: `1px solid ${subject === s ? T.accent : T.border}`, borderRadius: 14, padding: "4px 10px", color: subject === s ? T.accent : T.textMuted, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{s}</button>)}</div>
           </div>
 
-          {/* Level */}
           <div>
             <div style={{ fontSize: 11, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "monospace", marginBottom: 8 }}>当前水平</div>
-            <div style={{ display: "flex", gap: 6 }}>
-              {LEVELS.map(l => (
-                <button key={l} onClick={() => setLevel(l)}
-                  style={{ flex: 1, background: level === l ? T.accentGlow : T.surface, border: `1px solid ${level === l ? T.accent : T.border}`, borderRadius: 8, padding: "7px 0", color: level === l ? T.accent : T.textDim, fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: level === l ? 600 : 400, transition: "all 0.2s" }}>
-                  {l}
-                </button>
-              ))}
-            </div>
+            <div style={{ display: "flex", gap: 6 }}>{LEVELS.map(l => <button key={l} onClick={() => setLevel(l)} style={{ flex: 1, background: level === l ? T.accentGlow : T.surface, border: `1px solid ${level === l ? T.accent : T.border}`, borderRadius: 8, padding: "7px 0", color: level === l ? T.accent : T.textDim, fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: level === l ? 600 : 400 }}>{l}</button>)}</div>
           </div>
 
-          {/* Goal */}
           <div>
             <div style={{ fontSize: 11, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "monospace", marginBottom: 8 }}>学习目标（选填）</div>
-            <input
-              value={goal} onChange={e => setGoal(e.target.value)}
-              placeholder="例如：通过期末考试 / 能独立写代码 / 日常对话…"
-              style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14, fontFamily: "inherit", transition: "border-color 0.2s" }}
-              onFocus={e => e.target.style.borderColor = T.accent}
-              onBlur={e => e.target.style.borderColor = T.border}
-            />
+            <input value={goal} onChange={e => setGoal(e.target.value)} placeholder="例如：通过期末考试 / 能独立写代码 / 日常对话…" style={{ width: "100%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px", color: T.text, fontSize: 14, fontFamily: "inherit" }} />
           </div>
 
-          {/* Teacher preview */}
-          {subject && (() => {
-            const t = getTeacher(subject);
-            return (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.accentGlow, border: `1px solid ${T.accent}33`, borderRadius: 12, padding: "12px 16px" }}>
-                <div style={{ width: 42, height: 42, borderRadius: "50%", background: T.accentGlow, border: `1px solid ${T.accent}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: T.accent, fontWeight: 700, flexShrink: 0 }}>{t.avatar}</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{t.name} <span style={{ fontSize: 12, color: T.textDim }}>· {t.title}</span></div>
-                  <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>将担任你的专属导师 {t.lang === "en-US" ? "🎙️ 支持英语语音" : "🎙️ 支持中文语音"}</div>
-                </div>
-              </div>
-            );
-          })()}
+          {subject && (() => { const t = getTeacher(subject); return <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.accentGlow, border: `1px solid ${T.accent}33`, borderRadius: 12, padding: "12px 16px" }}><div style={{ width: 42, height: 42, borderRadius: "50%", background: T.accentGlow, border: `1px solid ${T.accent}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: T.accent, fontWeight: 700, flexShrink: 0 }}>{t.avatar}</div><div><div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{t.name} <span style={{ fontSize: 12, color: T.textDim }}>· {t.title}</span></div><div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>将担任你的专属导师 {t.lang === "en-US" ? "🎙️ 支持英语语音" : "🎙️ 支持中文语音"}</div></div></div>; })()}
 
-          {/* Model info */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>{MODEL_PROVIDERS[activeProvider]?.icon || '🔧'}</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{MODEL_PROVIDERS[activeProvider]?.icon || "🔧"}</span>
               <div>
-                <div style={{ fontSize: 12, color: T.text }}>当前模型: {MODEL_PROVIDERS[activeProvider]?.name || '未配置'}</div>
-                <div style={{ fontSize: 11, color: T.textMuted }}>
-                  {modelConfigs[activeProvider]?.model
-                    ? MODEL_PROVIDERS[activeProvider]?.models.find(m => m.id === modelConfigs[activeProvider].model)?.name || modelConfigs[activeProvider].model
-                    : '未选择模型'
-                  }
-                </div>
+                <div style={{ fontSize: 12, color: T.text }}>当前模型: {MODEL_PROVIDERS[activeProvider]?.name || "未配置"}</div>
+                <div style={{ fontSize: 11, color: T.textMuted }}>{modelConfigs[activeProvider]?.model ? MODEL_PROVIDERS[activeProvider]?.models.find(m => m.id === modelConfigs[activeProvider].model)?.name || modelConfigs[activeProvider].model : "未选择模型"}</div>
               </div>
             </div>
-            <button
-              onClick={() => setShowModelConfig(true)}
-              style={{
-                background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8,
-                padding: '6px 12px', color: T.accent, fontSize: 12, cursor: 'pointer',
-              }}
-            >
-              <Settings size={12} style={{ marginRight: 4 }} />
-              配置
-            </button>
+            <button onClick={() => setShowModelConfig(true)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 12px", color: T.accent, fontSize: 12, cursor: "pointer" }}><Settings size={12} style={{ marginRight: 4 }} />配置</button>
           </div>
 
-          {/* Start button */}
-          <button onClick={handleStart} disabled={!subject.trim()}
-            style={{ background: subject.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accentDim})` : T.border, border: "none", borderRadius: 12, padding: "14px", color: subject.trim() ? T.userText : T.textMuted, fontSize: 15, fontWeight: 700, cursor: subject.trim() ? "pointer" : "not-allowed", fontFamily: "inherit", letterSpacing: "0.04em", transition: "opacity 0.2s" }}>
-            开始一对一学习 →
-          </button>
-        </div>
-
-        {/* Features */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {[
-            { i: "🔍", t: "知识漏洞诊断", d: "先摸底再讲，精准找到你的盲区" },
-            { i: "📊", t: "掌握率追踪", d: "实时监测，低于80%绝不推进" },
-            { i: "🎙️", t: "实时语音对话", d: "说出你的答案，打造沉浸式环境" },
-            { i: "🧑‍🏫", t: "专属教师人格", d: "不同学科匹配不同风格导师" },
-          ].map(f => (
-            <div key={f.t} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div style={{ fontSize: 22, flexShrink: 0 }}>{f.i}</div>
-              <div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: T.text, marginBottom: 3 }}>{f.t}</div>
-                <div style={{ fontSize: 12, color: T.textDim, lineHeight: 1.5 }}>{f.d}</div>
-              </div>
-            </div>
-          ))}
+          <button onClick={handleStart} disabled={!subject.trim()} style={{ background: subject.trim() ? `linear-gradient(135deg, ${T.accent}, ${T.accentDim})` : T.border, border: "none", borderRadius: 12, padding: "14px", color: subject.trim() ? T.userText : T.textMuted, fontSize: 15, fontWeight: 700, cursor: subject.trim() ? "pointer" : "not-allowed", fontFamily: "inherit" }}>开始一对一学习 →</button>
         </div>
       </div>
 
-      {/* Modals */}
-      {showModelConfig && (
-        <ModelConfigPanel
-          T={T}
-          configs={modelConfigs}
-          setConfigs={setModelConfigs}
-          activeProvider={activeProvider}
-          setActiveProvider={setActiveProvider}
-          onClose={() => {
-            setShowModelConfig(false);
-          }}
-        />
-      )}
-      {showUserCenter && (
-        <UserCenterPanel
-          T={T}
-          currentUser={currentUser}
-          users={users}
-          onClose={() => setShowUserCenter(false)}
-          onSwitchUser={handleSwitchUser}
-          onAddUser={handleAddUser}
-          onDeleteUser={handleDeleteUser}
-        />
-      )}
+      {showModelConfig && <ModelConfigPanel T={T} configs={modelConfigs} setConfigs={setModelConfigs} activeProvider={activeProvider} setActiveProvider={setActiveProvider} onClose={() => setShowModelConfig(false)} />}
+      {showUserCenter && <UserCenterPanel T={T} currentUser={currentUser} users={users} onClose={() => setShowUserCenter(false)} onSwitchUser={handleSwitchUser} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} />}
     </div>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CHAT SCREEN
-  // ═══════════════════════════════════════════════════════════════════════════
-  const [ml, mlIcon] = masteryLabel(mastery);
+  const [ml] = masteryLabel(mastery);
   const elapsed = sessionStats.startTime ? Math.round((Date.now() - sessionStats.startTime) / 60000) : 0;
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: T.bg, color: T.text, fontFamily: "'Georgia','Times New Roman',serif", overflow: "hidden", position: "relative" }}>
-      <style>{`
-        @keyframes dotBounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
-        @keyframes recordPulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.4)} 50%{box-shadow:0 0 0 8px rgba(248,113,113,0)} }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 2px; }
-        textarea:focus { border-color: ${T.accent} !important; outline: none; }
-        .qbtn:hover { background: ${T.accentGlow} !important; border-color: ${T.accent} !important; }
-        .iconbtn:hover { opacity: 0.8; }
-      `}</style>
-
-      {/* Ambient */}
+      <style>{`@keyframes dotBounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} } @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} } @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} } @keyframes recordPulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.4)} 50%{box-shadow:0 0 0 8px rgba(248,113,113,0)} } * { box-sizing: border-box; } ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 2px; } textarea:focus { border-color: ${T.accent} !important; outline: none; } .qbtn:hover { background: ${T.accentGlow} !important; border-color: ${T.accent} !important; } .iconbtn:hover { opacity: 0.8; }`}</style>
       <div style={{ position: "fixed", width: 400, height: 400, borderRadius: "50%", background: `radial-gradient(circle, ${T.orb1} 0%, transparent 70%)`, left: -150, top: -100, pointerEvents: "none", zIndex: 0 }} />
 
-      {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: `1px solid ${T.border}`, background: T.headerBg, backdropFilter: "blur(12px)", flexShrink: 0, position: "relative", zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button className="iconbtn" onClick={() => setPhase("onboard")} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 20, padding: "2px 4px", lineHeight: 1 }}>←</button>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.accentGlow, border: `1px solid ${T.accent}66`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: T.accent, fontWeight: 700 }}>
-            {teacher.avatar}
-          </div>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.accentGlow, border: `1px solid ${T.accent}66`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: T.accent, fontWeight: 700 }}>{teacher.avatar}</div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: T.text, lineHeight: 1.2 }}>{teacher.name} <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 400 }}>· {teacher.title}</span></div>
-            <div style={{ fontSize: 11, color: T.textMuted, display: "flex", gap: 8 }}>
-              <span style={{ color: T.accent }}>{subject}</span>
-              <span>·</span>
-              <span>{level}</span>
-              <span>·</span>
-              <span>第{sessionStats.turns}轮</span>
-              {elapsed > 0 && <><span>·</span><span>{elapsed}分钟</span></>}
-            </div>
+            <div style={{ fontSize: 11, color: T.textMuted, display: "flex", gap: 8 }}><span style={{ color: T.accent }}>{subject}</span><span>·</span><span>{level}</span><span>·</span><span>第{sessionStats.turns}轮</span>{elapsed > 0 && <><span>·</span><span>{elapsed}分钟</span></>}</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* User button */}
-          <button
-            onClick={() => setShowUserCenter(true)}
-            style={{
-              background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8,
-              padding: "5px 8px", color: T.text, cursor: "pointer", fontSize: 12,
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
-          >
-            <Users size={12} /> {currentUser?.avatar || '👤'}
-          </button>
-          {/* Voice settings */}
-          {voiceSupported && (
-            <button className="iconbtn" onClick={() => setShowVoiceSettings(true)}
-              style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 8px", color: T.accent, cursor: "pointer", fontSize: 14 }}>
-              🔊
-            </button>
-          )}
-          {/* Model config */}
-          <button className="iconbtn" onClick={() => setShowModelConfig(true)}
-            style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 8px", color: T.accent, cursor: "pointer", fontSize: 14 }}>
-            {MODEL_PROVIDERS[activeProvider]?.icon || '⚙️'}
-          </button>
-          {/* Theme switcher */}
+          <button onClick={() => setShowUserCenter(true)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 8px", color: T.text, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}><Users size={12} /> {currentUser?.avatar || "👤"}</button>
+          <button onClick={() => setShowVoiceSettings(true)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 8px", color: T.accent, cursor: "pointer", fontSize: 14 }}>🔊</button>
+          <button onClick={() => setShowModelConfig(true)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 8px", color: T.accent, cursor: "pointer", fontSize: 14 }}>{MODEL_PROVIDERS[activeProvider]?.icon || "⚙️"}</button>
           <div style={{ position: "relative" }}>
-            <button className="iconbtn" onClick={() => setShowThemes(p => !p)}
-              style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.accent, cursor: "pointer", fontSize: 14 }}>
-              {THEMES[themeId].icon}
-            </button>
-            {showThemes && (
-              <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 8, display: "flex", flexDirection: "column", gap: 4, zIndex: 200, minWidth: 130 }}>
-                {Object.values(THEMES).map(th => (
-                  <button key={th.id} onClick={() => { handleChangeTheme(th.id); setShowThemes(false); }}
-                    style={{ background: themeId === th.id ? T.accentGlow : "transparent", border: "none", borderRadius: 8, padding: "6px 10px", color: themeId === th.id ? T.accent : T.textDim, cursor: "pointer", fontSize: 13, textAlign: "left", display: "flex", gap: 8, alignItems: "center", fontFamily: "inherit" }}>
-                    {th.icon} {th.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            <button onClick={() => setShowThemes(p => !p)} style={{ background: T.accentGlow, border: `1px solid ${T.border}`, borderRadius: 8, padding: "5px 10px", color: T.accent, cursor: "pointer", fontSize: 14 }}>{THEMES[themeId].icon}</button>
+            {showThemes && <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 8, display: "flex", flexDirection: "column", gap: 4, zIndex: 200, minWidth: 130 }}>{Object.values(THEMES).map(th => <button key={th.id} onClick={() => { handleChangeTheme(th.id); setShowThemes(false); }} style={{ background: themeId === th.id ? T.accentGlow : "transparent", border: "none", borderRadius: 8, padding: "6px 10px", color: themeId === th.id ? T.accent : T.textDim, cursor: "pointer", fontSize: 13, textAlign: "left", display: "flex", gap: 8, alignItems: "center", fontFamily: "inherit" }}>{th.icon} {th.name}</button>)}</div>}
           </div>
-          {/* Mastery ring */}
-          <MasteryRing value={mastery} accent={T.accent} />
+          <MasteryRing value={mastery} />
         </div>
       </div>
 
-      {/* ── Mastery bar ── */}
-      <div style={{ height: 3, background: T.border, flexShrink: 0, position: "relative", zIndex: 9 }}>
-        <div style={{ height: "100%", width: `${mastery}%`, background: `linear-gradient(90deg, ${masteryColor(mastery)}, ${masteryColor(Math.min(mastery+20,100))})`, transition: "width 1s cubic-bezier(0.34,1.56,0.64,1)", boxShadow: `0 0 6px ${masteryColor(mastery)}` }} />
-      </div>
+      <div style={{ height: 3, background: T.border, flexShrink: 0, position: "relative", zIndex: 9 }}><div style={{ height: "100%", width: `${mastery}%`, background: `linear-gradient(90deg, ${masteryColor(mastery)}, ${masteryColor(Math.min(mastery+20,100))})`, transition: "width 1s cubic-bezier(0.34,1.56,0.64,1)", boxShadow: `0 0 6px ${masteryColor(mastery)}` }} /></div>
 
-      {/* ── Chat messages ── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 780, width: "100%", margin: "0 auto", alignSelf: "stretch", position: "relative", zIndex: 1 }}>
         {messages.map((msg, i) => (
           <div key={i} style={{ display: "flex", flexDirection: msg.role === "user" ? "row-reverse" : "row", gap: 10, alignItems: "flex-start", animation: "fadeUp 0.25s ease" }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, background: msg.role === "user" ? `linear-gradient(135deg, ${T.accent}, ${T.accentDim})` : T.accentGlow, border: msg.role === "user" ? "none" : `1px solid ${T.border}`, color: msg.role === "user" ? T.userText : T.accent }}>
-              {msg.role === "user" ? "你" : teacher.avatar}
-            </div>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, background: msg.role === "user" ? `linear-gradient(135deg, ${T.accent}, ${T.accentDim})` : T.accentGlow, border: msg.role === "user" ? "none" : `1px solid ${T.border}`, color: msg.role === "user" ? T.userText : T.accent }}>{msg.role === "user" ? "你" : teacher.avatar}</div>
             <div style={{ maxWidth: "76%" }}>
-              {msg.role === "assistant" && msg.mode && MODE_INFO[msg.mode] && (
-                <div style={{ fontSize: 11, fontFamily: "monospace", padding: "2px 8px", borderRadius: 10, background: `${MODE_INFO[msg.mode].color}18`, color: MODE_INFO[msg.mode].color, display: "inline-block", marginBottom: 6, fontWeight: 600, letterSpacing: "0.04em" }}>
-                  {MODE_INFO[msg.mode].label}
-                </div>
-              )}
-              <div style={{ background: msg.role === "user" ? T.userBubble : T.card, border: msg.role === "user" ? "none" : `1px solid ${T.border}`, borderRadius: msg.role === "user" ? "18px 4px 18px 18px" : "4px 18px 18px 18px", padding: "11px 15px", color: msg.role === "user" ? T.userText : T.text, fontSize: 14.5, lineHeight: 1.65, boxShadow: `0 2px 8px rgba(0,0,0,0.15)` }}>
-                <PronunciationText
-                  text={msg.content}
-                  lang={msg.role === "assistant" ? teacher.lang : "zh-CN"}
-                  voiceEnabled={voiceSettings.enabled}
-                  voiceSettings={voiceSettings}
-                />
+              {msg.role === "assistant" && msg.mode && MODE_INFO[msg.mode] && <div style={{ fontSize: 11, fontFamily: "monospace", padding: "2px 8px", borderRadius: 10, background: `${MODE_INFO[msg.mode].color}18`, color: MODE_INFO[msg.mode].color, display: "inline-block", marginBottom: 6, fontWeight: 600, letterSpacing: "0.04em" }}>{MODE_INFO[msg.mode].label}</div>}
+              <div style={{ background: msg.role === "user" ? T.userBubble : T.card, border: msg.role === "user" ? "none" : `1px solid ${T.border}`, borderRadius: msg.role === "user" ? "18px 4px 18px 18px" : "4px 18px 18px 18px", padding: "11px 15px", color: msg.role === "user" ? T.userText : T.text, fontSize: 14.5, lineHeight: 1.65, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                <PronunciationText text={msg.content} lang={msg.role === "assistant" ? teacher.lang : "zh-CN"} voiceEnabled={voiceSettings.enabled} voiceSettings={voiceSettings} />
               </div>
-              {msg.role === "assistant" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
-                  {msg.insight && <div style={{ fontSize: 11, color: T.textMuted, fontStyle: "italic", fontFamily: "monospace" }}>💭 {msg.insight}</div>}
-                  {voiceSupported && (
-                    <button className="iconbtn" onClick={() => speakText(msg.content)}
-                      style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 13, padding: "0 4px" }} title="朗读">
-                      🔊
-                    </button>
-                  )}
-                </div>
-              )}
-              {msg.role === "assistant" && msg.suggestedResponses?.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                  {msg.suggestedResponses.map((r, j) => (
-                    <button key={j} className="qbtn" onClick={() => handleSend(r)}
-                      style={{ background: T.surface, border: `1px solid ${T.accent}33`, borderRadius: 18, padding: "5px 12px", color: T.accent, fontSize: 13, cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit" }}>
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {msg.role === "assistant" && <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>{msg.insight && <div style={{ fontSize: 11, color: T.textMuted, fontStyle: "italic", fontFamily: "monospace" }}>💭 {msg.insight}</div>}<button onClick={() => speakText(msg.content)} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 13, padding: "0 4px" }} title="朗读">🔊</button></div>}
+              {msg.role === "assistant" && msg.suggestedResponses?.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>{msg.suggestedResponses.map((r, j) => <button key={j} onClick={() => handleSend(r)} style={{ background: T.surface, border: `1px solid ${T.accent}33`, borderRadius: 18, padding: "5px 12px", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{r}</button>)}</div>}
             </div>
           </div>
         ))}
@@ -1967,107 +1410,22 @@ export default function App() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* ── Mastery milestone banner ── */}
-      {mastery >= 80 && messages.length > 0 && !loading && (
-        <div style={{ margin: "0 16px 4px", maxWidth: 780, alignSelf: "center", width: "calc(100% - 32px)", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", borderRadius: 10, padding: "8px 14px", fontSize: 13, color: "#4ade80", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          ✨ 掌握率已达 <strong>{mastery}%</strong>！这个知识点你已经真正掌握了，可以继续深入。
-        </div>
-      )}
+      {mastery >= 80 && messages.length > 0 && !loading && <div style={{ margin: "0 16px 4px", maxWidth: 780, alignSelf: "center", width: "calc(100% - 32px)", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", borderRadius: 10, padding: "8px 14px", fontSize: 13, color: "#4ade80", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>✨ 掌握率已达 <strong>{mastery}%</strong>！这个知识点你已经真正掌握了，可以继续深入。</div>}
 
-      {/* ── Input area ── */}
       <div style={{ padding: "10px 16px 16px", borderTop: `1px solid ${T.border}`, maxWidth: 780, width: "100%", margin: "0 auto", flexShrink: 0, position: "relative", zIndex: 10 }}>
-        {/* Speak if TTS is active */}
-        {isSpeaking && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 12, color: T.accent }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.accent, animation: "pulse 1s infinite" }} />
-            {teacher.name}正在朗读… <button onClick={stopSpeaking} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>停止</button>
-          </div>
-        )}
+        {isSpeaking && <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 12, color: T.accent }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: T.accent, animation: "pulse 1s infinite" }} />{teacher.name}正在朗读… <button onClick={stopSpeaking} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>停止</button></div>}
+        {voiceError && <div style={{ marginBottom: 8, fontSize: 12, color: "#f87171" }}>{voiceError}</div>}
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-          {/* Voice mic button */}
-          {voiceSupported && voiceSettings.enabled && (
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={loading}
-              style={{
-                width: 44, height: 44, borderRadius: "50%", border: "none",
-                background: isRecording ? "#f87171" : T.surface,
-                border: `1px solid ${isRecording ? "#f87171" : T.border}`,
-                color: isRecording ? "#fff" : T.textMuted,
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                animation: isRecording ? "recordPulse 1.5s infinite" : "none",
-                transition: "all 0.2s",
-              }}
-              title={isRecording ? "停止录音" : `语音输入 (${teacher.lang === 'en-US' ? '英语' : '中文'})`}>
-              {isRecording ? "⏹" : "🎙"}
-            </button>
-          )}
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            disabled={loading}
-            placeholder={isRecording ? `正在录音（${teacher.lang === 'en-US' ? '请说英语' : '请说话'}）…` : "输入你的回答或问题… (Enter发送，Shift+Enter换行)"}
-            rows={1}
-            style={{ flex: 1, background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", color: T.text, fontSize: 14, lineHeight: 1.5, resize: "none", fontFamily: "inherit", transition: "border-color 0.2s", minHeight: 46, maxHeight: 120, boxShadow: "none" }}
-          />
-          {/* Send button */}
-          <button
-            onClick={() => handleSend()}
-            disabled={loading || !input.trim()}
-            style={{
-              width: 44, height: 44, borderRadius: 12, border: "none",
-              background: (loading || !input.trim()) ? T.border : `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`,
-              color: (loading || !input.trim()) ? T.textMuted : T.userText,
-              cursor: (loading || !input.trim()) ? "not-allowed" : "pointer",
-              fontSize: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 0.2s",
-            }}>
-            {loading ? <span style={{ animation: "spin 1s linear infinite", display: "inline-block", fontSize: 16 }}>⟳</span> : "↑"}
-          </button>
+          {voiceSettings.enabled && voiceSettings.voiceMode !== "text" && <button onClick={isRecording ? stopRecording : startRecording} disabled={loading} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: isRecording ? "#f87171" : T.surface, borderColor: isRecording ? "#f87171" : T.border, borderStyle: "solid", borderWidth: 1, color: isRecording ? "#fff" : T.textMuted, cursor: loading ? "not-allowed" : "pointer", fontSize: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", animation: isRecording ? "recordPulse 1.5s infinite" : "none" }} title={isRecording ? "停止录音" : "语音输入"}>{isRecording ? "⏹" : "🎙"}</button>}
+          <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }} disabled={loading} placeholder={isRecording ? `正在录音（${teacher.lang === "en-US" ? "请说英语" : "请说话"}）…` : "输入你的回答或问题… (Enter发送，Shift+Enter换行)"} rows={1} style={{ flex: 1, background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", color: T.text, fontSize: 14, lineHeight: 1.5, resize: "none", fontFamily: "inherit", minHeight: 46, maxHeight: 120, boxShadow: "none" }} />
+          <button onClick={() => handleSend()} disabled={loading || !input.trim()} style={{ width: 44, height: 44, borderRadius: 12, border: "none", background: (loading || !input.trim()) ? T.border : `linear-gradient(135deg, ${T.accent}, ${T.accentDim})`, color: (loading || !input.trim()) ? T.textMuted : T.userText, cursor: (loading || !input.trim()) ? "not-allowed" : "pointer", fontSize: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>{loading ? <span style={{ animation: "spin 1s linear infinite", display: "inline-block", fontSize: 16 }}>⟳</span> : "↑"}</button>
         </div>
-        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 6, textAlign: "center" }}>
-          {mastery < 80
-            ? `💡 勇敢说出你的想法——答错了也没关系，错误是最好的老师 · 掌握率 ${mastery}%`
-            : `🏆 你已掌握这个知识点！告诉${teacher.name}你想学什么新内容吧`}
-        </div>
+        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 6, textAlign: "center" }}>{mastery < 80 ? `💡 勇敢说出你的想法——答错了也没关系，错误是最好的老师 · 掌握率 ${mastery}%` : `🏆 你已掌握这个知识点！告诉${teacher.name}你想学什么新内容吧`}</div>
       </div>
 
-      {/* Modals */}
-      {showModelConfig && (
-        <ModelConfigPanel
-          T={T}
-          configs={modelConfigs}
-          setConfigs={setModelConfigs}
-          activeProvider={activeProvider}
-          setActiveProvider={setActiveProvider}
-          onClose={() => {
-            setShowModelConfig(false);
-          }}
-        />
-      )}
-      {showUserCenter && (
-        <UserCenterPanel
-          T={T}
-          currentUser={currentUser}
-          users={users}
-          onClose={() => setShowUserCenter(false)}
-          onSwitchUser={handleSwitchUser}
-          onAddUser={handleAddUser}
-          onDeleteUser={handleDeleteUser}
-        />
-      )}
-      {showVoiceSettings && (
-        <VoiceSettingsPanel
-          T={T}
-          voiceSettings={voiceSettings}
-          onUpdate={handleUpdateVoiceSettings}
-          onClose={() => setShowVoiceSettings(false)}
-        />
-      )}
+      {showModelConfig && <ModelConfigPanel T={T} configs={modelConfigs} setConfigs={setModelConfigs} activeProvider={activeProvider} setActiveProvider={setActiveProvider} onClose={() => setShowModelConfig(false)} />}
+      {showUserCenter && <UserCenterPanel T={T} currentUser={currentUser} users={users} onClose={() => setShowUserCenter(false)} onSwitchUser={handleSwitchUser} onAddUser={handleAddUser} onDeleteUser={handleDeleteUser} />}
+      {showVoiceSettings && <VoiceSettingsPanel T={T} voiceSettings={voiceSettings} onUpdate={handleUpdateVoiceSettings} onClose={() => setShowVoiceSettings(false)} voiceCapability={voiceCapability} activeProvider={activeProvider} />}
     </div>
   );
 }
