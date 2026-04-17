@@ -317,7 +317,18 @@ function saveCurrentUserId(userId) {
 function loadModelConfigs() {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.MODEL_CONFIGS);
-    return data ? JSON.parse(data) : {};
+    if (!data) return {};
+
+    const parsed = JSON.parse(data);
+
+    // 检查是否是旧格式（直接存储apiKey而不是按provider存储）
+    if (parsed && parsed.apiKey && !parsed.deepseek && !parsed.minimax) {
+      // 旧格式：{apiKey: "xxx", model: "xxx"} - 需要迁移
+      console.log('检测到旧格式配置，正在迁移...');
+      return {}; // 返回空，让用户重新配置
+    }
+
+    return parsed;
   } catch { return {}; }
 }
 
@@ -464,12 +475,9 @@ async function callModelAPI(provider, config, messages, system) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MODEL CONFIG PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
-function ModelConfigPanel({ T, onClose }) {
-  const [configs, setConfigs] = useState(loadModelConfigs);
-  const [activeProvider, setActiveProvider] = useState(loadActiveProvider);
+function ModelConfigPanel({ T, configs, setConfigs, activeProvider, setActiveProvider, onClose }) {
   const [testingProvider, setTestingProvider] = useState(null);
   const [testResult, setTestResult] = useState(null);
-  const [editingKey, setEditingKey] = useState(null);
   const [showPassword, setShowPassword] = useState({});
 
   const handleSave = () => {
@@ -1793,10 +1801,12 @@ export default function App() {
       {showModelConfig && (
         <ModelConfigPanel
           T={T}
+          configs={modelConfigs}
+          setConfigs={setModelConfigs}
+          activeProvider={activeProvider}
+          setActiveProvider={setActiveProvider}
           onClose={() => {
             setShowModelConfig(false);
-            setModelConfigs(loadModelConfigs());
-            setActiveProvider(loadActiveProvider());
           }}
         />
       )}
@@ -2030,10 +2040,12 @@ export default function App() {
       {showModelConfig && (
         <ModelConfigPanel
           T={T}
+          configs={modelConfigs}
+          setConfigs={setModelConfigs}
+          activeProvider={activeProvider}
+          setActiveProvider={setActiveProvider}
           onClose={() => {
             setShowModelConfig(false);
-            setModelConfigs(loadModelConfigs());
-            setActiveProvider(loadActiveProvider());
           }}
         />
       )}
