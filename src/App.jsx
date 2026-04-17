@@ -409,14 +409,14 @@ async function callModelAPI(provider, config, messages, system) {
 
     case 'minimax':
       headers['Authorization'] = `Bearer ${apiKey}`;
-      endpoint += 'text/chatcompletion_v2';
+      endpoint += 'v1/text/chatcompletion_v2';
       body = {
         model: model,
         messages: [
           ...(system ? [{ role: 'system', content: system }] : []),
           ...messages,
         ],
-        max_tokens: 1000,
+        max_tokens: 1024,
         temperature: 0.7,
       };
       break;
